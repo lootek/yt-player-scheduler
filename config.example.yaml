@@ -1,0 +1,31 @@
+global:
+  search_limit: 5
+  player:
+    command: ffplay
+    args:
+      - -nodisp
+      - -autoexit
+      - -loglevel
+      - warning
+      - "{url}"
+    env:
+      # Point the container to the host PulseAudio socket; override as needed.
+      PULSE_SERVER: "unix:/tmp/pulse-socket"
+    timeout: 20m
+  ytdlp:
+    binary: yt-dlp
+    # Point to an exported cookies file to use YouTube Premium (avoid ads).
+    # Mount it into the container (see docker-compose.yaml) and reference the container path here.
+    cookies: /app/cookies.txt
+    extra_args: []
+
+jobs:
+  - name: morning-feed
+    cron: "0 8 * * *"
+    keywords:
+      - my keyword
+      - daily playlist
+    # Use Go time layout; defaults to 2006-01-02 when omitted.
+    date_format: "2006-01-02"
+    # Optional override; falls back to global.search_limit when omitted.
+    search_limit: 5
