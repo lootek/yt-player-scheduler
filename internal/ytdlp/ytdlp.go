@@ -101,21 +101,28 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 	}
 	defer cleanup()
 
-	attempts := [][]string{{}} // default attempt: no extra extractor args
+	type extractorAttempt struct {
+		args       []string
+		useCookies bool
+	}
+
+	attempts := []extractorAttempt{
+		{args: nil, useCookies: true}, // default: pass cookies if available
+	}
 	if !hasExtractorArgs(c.cfg.ExtraArgs) {
 		// Fallback clients that often bypass signature challenges.
 		attempts = append(attempts,
-			[]string{"--extractor-args", "youtube:player_client=android"},
-			[]string{"--extractor-args", "youtube:player_client=ios"},
+			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=android"}, useCookies: false},
+			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=ios"}, useCookies: false},
 		)
 	}
 
 	var lastErr error
 	for i, extra := range attempts {
 		if i > 0 {
-			fmt.Fprintf(os.Stderr, "yt-dlp: retrying with args %v\n", extra)
+			fmt.Fprintf(os.Stderr, "yt-dlp: retrying with args %v (cookies:%v)\n", extra.args, extra.useCookies && cookiePath != "")
 		}
-		stream, err := c.resolveStreamWithArgs(ctx, videoURL, cookiePath, extra)
+		stream, err := c.resolveStreamWithArgs(ctx, videoURL, cookiePath, extra.args, extra.useCookies)
 		if err == nil {
 			return stream, nil
 		}
@@ -153,14 +160,14 @@ func (v VideoEntry) VideoURL() string {
 	}
 }
 
-func (c Client) resolveStreamWithArgs(ctx context.Context, videoURL, cookiePath string, extraArgs []string) (string, error) {
+func (c Client) resolveStreamWithArgs(ctx context.Context, videoURL, cookiePath string, extraArgs []string, useCookies bool) (string, error) {
 	args := append([]string{}, c.baseArgs()...)
 	args = append(args, extraArgs...)
 	args = append(args,
 		"-f", "bestaudio[ext=m4a]/bestaudio",
 		"-g", videoURL,
 	)
-	if cookiePath != "" {
+	if useCookies && cookiePath != "" {
 		args = append(args, "--cookies", cookiePath)
 	}
 	cmd := exec.CommandContext(ctx, c.binary(), args...)
@@ -224,8 +231,8 @@ func hasExtractorArgs(args []string) bool {
 		if strings.HasPrefix(a, "--extractor-args=") {
 			return true
 		}
-		// Handle short form: next token is the value.
-		if a == "-v" && i+1 < len(args) && strings.HasPrefix(args[i+1], "youtube:player_client=") {
+		// Handle positional value after flag.
+		if a == "--extractor-args" && i+1 < len(args) && strings.HasPrefix(args[i+1], "youtube:player_client=") {
 			return true
 		}
 	}
