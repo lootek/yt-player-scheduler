@@ -82,7 +82,7 @@ Key bits:
 
 ## Using YouTube Premium (no ads)
 1. Export cookies from your browser session (logged into your Premium account):
-   - Easiest: `yt-dlp --cookies-from-browser chrome --cookies cookies.txt https://www.youtube.com/watch?v=dQw4w9WgXcQ --max-downloads 0`
+   - Easiest: `yt-dlp --cookies-from-browser safari --cookies cookies.txt "https://www.youtube.com/watch?v=p4AZvHxOQ5U" --max-downloads 0`
    - Or use a browser extension (e.g., “cookies.txt”) to save a `cookies.txt`.
 2. Place the file in your project and set `global.ytdlp.cookies` to its container path (default `/app/cookies.txt`).
 3. When using Docker/Compose, mount the file: add `- ./cookies.txt:/app/cookies.txt:ro` under `volumes` for the service.
