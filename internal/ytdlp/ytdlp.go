@@ -46,7 +46,8 @@ func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEnt
 		"--dump-json",
 		"--no-warnings",
 		"--ignore-errors",
-		"--js-runtimes", "node",
+		// "--js-runtimes", "node",
+		"--remote-components", "ejs:npm",
 		"--limit", fmt.Sprint(limit),
 		searchSpec,
 	)
