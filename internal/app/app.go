@@ -32,7 +32,7 @@ func (a *App) RunJob(ctx context.Context, job config.JobConfig) error {
 		jobName = strings.Join(job.Keywords, " ")
 	}
 
-	queryString := query.Build(job.Keywords, job.DateFormat)
+	queryString := query.Build(job.Keywords, job.DateFormat, job.DateLocale)
 	limit := job.SearchLimit
 	if limit <= 0 {
 		limit = a.cfg.Global.SearchLimit
