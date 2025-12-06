@@ -101,7 +101,62 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 	}
 	defer cleanup()
 
-	args := append(c.baseArgs(),
+	attempts := [][]string{{}} // default attempt: no extra extractor args
+	if !hasExtractorArgs(c.cfg.ExtraArgs) {
+		// Fallback clients that often bypass signature challenges.
+		attempts = append(attempts,
+			[]string{"--extractor-args", "youtube:player_client=android"},
+			[]string{"--extractor-args", "youtube:player_client=ios"},
+		)
+	}
+
+	var lastErr error
+	for i, extra := range attempts {
+		if i > 0 {
+			fmt.Fprintf(os.Stderr, "yt-dlp: retrying with args %v\n", extra)
+		}
+		stream, err := c.resolveStreamWithArgs(ctx, videoURL, cookiePath, extra)
+		if err == nil {
+			return stream, nil
+		}
+		lastErr = err
+	}
+	if lastErr != nil {
+		return "", lastErr
+	}
+	return "", errors.New("empty stream URL")
+}
+
+func (c Client) baseArgs() []string {
+	args := make([]string, 0, len(c.cfg.ExtraArgs)+2)
+	args = append(args, c.cfg.ExtraArgs...)
+	return args
+}
+
+func (c Client) binary() string {
+	if c.cfg.Binary != "" {
+		return c.cfg.Binary
+	}
+	return "yt-dlp"
+}
+
+func (v VideoEntry) VideoURL() string {
+	switch {
+	case v.WebpageURL != "":
+		return v.WebpageURL
+	case v.URL != "":
+		return v.URL
+	case v.ID != "":
+		return "https://www.youtube.com/watch?v=" + v.ID
+	default:
+		return ""
+	}
+}
+
+func (c Client) resolveStreamWithArgs(ctx context.Context, videoURL, cookiePath string, extraArgs []string) (string, error) {
+	args := append([]string{}, c.baseArgs()...)
+	args = append(args, extraArgs...)
+	args = append(args,
 		"-f", "bestaudio[ext=m4a]/bestaudio",
 		"-g", videoURL,
 	)
@@ -129,32 +184,6 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 		return "", errors.New("empty stream URL")
 	}
 	return stream, nil
-}
-
-func (c Client) baseArgs() []string {
-	args := make([]string, 0, len(c.cfg.ExtraArgs)+2)
-	args = append(args, c.cfg.ExtraArgs...)
-	return args
-}
-
-func (c Client) binary() string {
-	if c.cfg.Binary != "" {
-		return c.cfg.Binary
-	}
-	return "yt-dlp"
-}
-
-func (v VideoEntry) VideoURL() string {
-	switch {
-	case v.WebpageURL != "":
-		return v.WebpageURL
-	case v.URL != "":
-		return v.URL
-	case v.ID != "":
-		return "https://www.youtube.com/watch?v=" + v.ID
-	default:
-		return ""
-	}
 }
 
 func (c Client) prepareCookies() (string, func(), error) {
@@ -185,4 +214,20 @@ func (c Client) prepareCookies() (string, func(), error) {
 	}
 
 	return tmp.Name(), cleanup, nil
+}
+
+func hasExtractorArgs(args []string) bool {
+	for i, a := range args {
+		if a == "--extractor-args" {
+			return true
+		}
+		if strings.HasPrefix(a, "--extractor-args=") {
+			return true
+		}
+		// Handle short form: next token is the value.
+		if a == "-v" && i+1 < len(args) && strings.HasPrefix(args[i+1], "youtube:player_client=") {
+			return true
+		}
+	}
+	return false
 }
