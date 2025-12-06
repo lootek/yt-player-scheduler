@@ -26,7 +26,10 @@ func Play(ctx context.Context, cfg config.PlayerConfig, streamURL string) error 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), formatEnv(cfg.Env)...)
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("player command failed (%s): %w", cmd.String(), err)
+	}
+	return nil
 }
 
 func formatEnv(env map[string]string) []string {

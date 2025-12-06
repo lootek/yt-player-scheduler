@@ -2,10 +2,13 @@ package ytdlp
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -41,12 +44,15 @@ func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEnt
 		searchSpec,
 	)
 	cmd := exec.CommandContext(ctx, c.binary(), args...)
+	cmdLine := cmd.String()
+	stderr := &bytes.Buffer{}
+	cmd.Stderr = io.MultiWriter(os.Stderr, stderr)
 	output, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("pipe stdout: %w", err)
+		return nil, fmt.Errorf("pipe stdout (%s): %w", cmdLine, err)
 	}
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("start yt-dlp: %w", err)
+		return nil, fmt.Errorf("start yt-dlp (%s): %w", cmdLine, err)
 	}
 
 	var results []VideoEntry
@@ -66,10 +72,13 @@ func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEnt
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scan yt-dlp output: %w", err)
+		return nil, fmt.Errorf("scan yt-dlp output (%s): %w", cmdLine, err)
 	}
 	if err := cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("yt-dlp search failed: %w", err)
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return nil, fmt.Errorf("yt-dlp search failed (%s): %s: %w", cmdLine, msg, err)
+		}
+		return nil, fmt.Errorf("yt-dlp search failed (%s): %w", cmdLine, err)
 	}
 	return results, nil
 }
@@ -80,12 +89,23 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 		"-g", videoURL,
 	)
 	cmd := exec.CommandContext(ctx, c.binary(), args...)
-	out, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("yt-dlp -g: %w", err)
+	cmdLine := cmd.String()
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
+
+	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return "", fmt.Errorf("yt-dlp -g (%s): %s: %w", cmdLine, msg, err)
+		}
+		return "", fmt.Errorf("yt-dlp -g (%s): %w", cmdLine, err)
 	}
-	stream := strings.TrimSpace(string(out))
+	stream := strings.TrimSpace(stdout.String())
 	if stream == "" {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return "", fmt.Errorf("empty stream URL (%s) (stderr: %s)", cmdLine, msg)
+		}
 		return "", errors.New("empty stream URL")
 	}
 	return stream, nil
