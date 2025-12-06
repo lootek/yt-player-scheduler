@@ -61,3 +61,7 @@ func (a *App) RunJob(ctx context.Context, job config.JobConfig) error {
 	a.logger.Printf("[job:%s] playback finished", jobName)
 	return nil
 }
+
+func (a *App) CheckAuth(ctx context.Context) (string, error) {
+	return a.ytdlp.CheckAuth(ctx)
+}

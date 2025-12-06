@@ -30,6 +30,49 @@ func New(cfg config.YtDLPConfig) Client {
 	return Client{cfg: cfg}
 }
 
+// CheckAuth verifies that yt-dlp can access Watch Later using the configured cookies.
+// It returns the title of the first item when successful.
+func (c Client) CheckAuth(ctx context.Context) (string, error) {
+	if c.cfg.Cookies == "" {
+		return "", errors.New("no cookies configured")
+	}
+
+	cookiePath, cleanup, err := c.prepareCookies()
+	if err != nil {
+		return "", fmt.Errorf("prepare cookies: %w", err)
+	}
+	defer cleanup()
+
+	args := append(c.baseArgs(),
+		"--cookies", cookiePath,
+		"--playlist-items", "1",
+		"--skip-download",
+		"-O", "%(title)s",
+		"https://www.youtube.com/playlist?list=WL",
+	)
+	cmd := exec.CommandContext(ctx, c.binary(), args...)
+	cmdLine := cmd.String()
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
+
+	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return "", fmt.Errorf("yt-dlp auth check (%s): %s: %w", cmdLine, msg, err)
+		}
+		return "", fmt.Errorf("yt-dlp auth check (%s): %w", cmdLine, err)
+	}
+	title := strings.TrimSpace(stdout.String())
+	if title == "" {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return "", fmt.Errorf("yt-dlp auth check (%s): empty output (stderr: %s)", cmdLine, msg)
+		}
+		return "", errors.New("yt-dlp auth check: empty output")
+	}
+	return title, nil
+}
+
 func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEntry, error) {
 	if limit <= 0 {
 		limit = config.DefaultSearchLimit
@@ -109,16 +152,20 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 	attempts := []extractorAttempt{
 		{args: nil, useCookies: true}, // default: pass cookies if available
 	}
+	if cookiePath != "" {
+		// Try once without cookies; sometimes logged-in context breaks formats.
+		attempts = append(attempts, extractorAttempt{args: nil, useCookies: false})
+	}
 	if !hasExtractorArgs(c.cfg.ExtraArgs) {
 		// Force JS engine detection (helps when yt-dlp fails to see node).
 		attempts = append(attempts,
 			extractorAttempt{args: []string{"--extractor-args", "youtube:js_engine=nodejs"}, useCookies: true},
 		)
 		// Fallback clients that often bypass signature challenges (without cookies).
-		attempts = append(attempts,
-			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=android"}, useCookies: false},
-			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=ios"}, useCookies: false},
-		)
+		// attempts = append(attempts,
+		// 	extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=android"}, useCookies: false},
+		// 	extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=ios"}, useCookies: false},
+		// )
 	}
 
 	var lastErr error

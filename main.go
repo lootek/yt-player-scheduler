@@ -34,6 +34,17 @@ func main() {
 	}
 
 	application := app.New(cfg, logger)
+
+	if cfg.Global.YtDLP.Cookies != "" {
+		authCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		if title, err := application.CheckAuth(authCtx); err != nil {
+			logger.Printf("yt-dlp auth check failed: %v", err)
+		} else {
+			logger.Printf("yt-dlp auth check passed; Watch Later reachable: %q", title)
+		}
+		cancel()
+	}
+
 	c := cron.New(
 		cron.WithLocation(time.Local),
 		cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)),
