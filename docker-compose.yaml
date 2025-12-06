@@ -13,9 +13,9 @@ services:
       # Main config file for jobs and player settings.
       - ./config.yaml:/app/config.yaml:ro
       # PulseAudio socket from the host; requires XDG_RUNTIME_DIR to be set when running docker compose.
-      - ${XDG_RUNTIME_DIR}/pulse/native:/tmp/pulse-socket
+      - /run/user/1000/pulse/native:/tmp/pulse-socket
       # Optional: mount yt-dlp cookies if needed for authenticated feeds.
-      # - ~/.config/yt-dlp/cookies.txt:/app/cookies.txt:ro
+      - ./cookies.txt:/app/cookies.txt:ro
     # Uncomment if your setup requires direct ALSA device access (usually not needed with PulseAudio).
     # devices:
     #   - /dev/snd
