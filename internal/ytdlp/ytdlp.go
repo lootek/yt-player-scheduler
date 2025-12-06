@@ -192,6 +192,9 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 func (c Client) baseArgs() []string {
 	args := make([]string, 0, len(c.cfg.ExtraArgs)+2)
 	args = append(args, c.cfg.ExtraArgs...)
+	if c.cfg.UserAgent != "" {
+		args = append(args, "--user-agent", c.cfg.UserAgent)
+	}
 	if c.cfg.POToken != "" {
 		args = append(args, "--po-token", c.cfg.POToken)
 	}

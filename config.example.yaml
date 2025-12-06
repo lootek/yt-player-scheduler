@@ -14,6 +14,8 @@ global:
     timeout: 20m
   ytdlp:
     binary: yt-dlp
+    # Optional: override user agent (e.g., Safari) if needed.
+    user_agent: ""
     # Provide PO token or provider to solve GVS challenges; optional.
     po_token: ""
     po_token_provider: ""

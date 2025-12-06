@@ -41,6 +41,7 @@ type YtDLPConfig struct {
 	POToken             string   `yaml:"po_token"`
 	POTokenProvider     string   `yaml:"po_token_provider"`
 	POTokenProviderArgs []string `yaml:"po_token_provider_args"`
+	UserAgent           string   `yaml:"user_agent"`
 }
 
 type JobConfig struct {
