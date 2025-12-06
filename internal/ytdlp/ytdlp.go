@@ -110,7 +110,11 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 		{args: nil, useCookies: true}, // default: pass cookies if available
 	}
 	if !hasExtractorArgs(c.cfg.ExtraArgs) {
-		// Fallback clients that often bypass signature challenges.
+		// Force JS engine detection (helps when yt-dlp fails to see node).
+		attempts = append(attempts,
+			extractorAttempt{args: []string{"--extractor-args", "youtube:js_engine=nodejs"}, useCookies: true},
+		)
+		// Fallback clients that often bypass signature challenges (without cookies).
 		attempts = append(attempts,
 			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=android"}, useCookies: false},
 			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=ios"}, useCookies: false},
