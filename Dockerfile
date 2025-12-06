@@ -26,6 +26,4 @@ COPY config.example.yaml /app/config.example.yaml
 # Point this to the host PulseAudio socket when running the container.
 ENV PULSE_SERVER=unix:/tmp/pulse-socket
 
-#ENTRYPOINT ["yt-rpi-player", "-config", "/app/config.yaml", "--run-now"]
-
-ENTRYPOINT ["yt-dlp", "--po-token-provider", "chromium", "--po-token-provider-args" "--headless --no-sandbox" "https://www.youtube.com/watch?v=JlIBZ7uTMLE"]
+CMD ["yt-rpi-player", "-config", "/app/config.yaml", "--run-now"]
