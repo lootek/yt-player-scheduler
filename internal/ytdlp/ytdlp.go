@@ -34,6 +34,12 @@ func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEnt
 	if limit <= 0 {
 		limit = config.DefaultSearchLimit
 	}
+	cookiePath, cleanup, err := c.prepareCookies()
+	if err != nil {
+		return nil, fmt.Errorf("prepare cookies: %w", err)
+	}
+	defer cleanup()
+
 	searchSpec := fmt.Sprintf("ytsearchdate%d:%s", limit, query)
 	args := append(c.baseArgs(),
 		"--flat-playlist",
@@ -43,6 +49,9 @@ func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEnt
 		"--limit", fmt.Sprint(limit),
 		searchSpec,
 	)
+	if cookiePath != "" {
+		args = append(args, "--cookies", cookiePath)
+	}
 	cmd := exec.CommandContext(ctx, c.binary(), args...)
 	cmdLine := cmd.String()
 	stderr := &bytes.Buffer{}
@@ -84,10 +93,19 @@ func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEnt
 }
 
 func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, error) {
+	cookiePath, cleanup, err := c.prepareCookies()
+	if err != nil {
+		return "", fmt.Errorf("prepare cookies: %w", err)
+	}
+	defer cleanup()
+
 	args := append(c.baseArgs(),
 		"-f", "bestaudio[ext=m4a]/bestaudio",
 		"-g", videoURL,
 	)
+	if cookiePath != "" {
+		args = append(args, "--cookies", cookiePath)
+	}
 	cmd := exec.CommandContext(ctx, c.binary(), args...)
 	cmdLine := cmd.String()
 
@@ -114,9 +132,6 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 func (c Client) baseArgs() []string {
 	args := make([]string, 0, len(c.cfg.ExtraArgs)+2)
 	args = append(args, c.cfg.ExtraArgs...)
-	if c.cfg.Cookies != "" {
-		args = append(args, "--cookies", c.cfg.Cookies)
-	}
 	return args
 }
 
@@ -138,4 +153,34 @@ func (v VideoEntry) VideoURL() string {
 	default:
 		return ""
 	}
+}
+
+func (c Client) prepareCookies() (string, func(), error) {
+	if c.cfg.Cookies == "" {
+		return "", func() {}, nil
+	}
+
+	src, err := os.Open(c.cfg.Cookies)
+	if err != nil {
+		return "", func() {}, fmt.Errorf("open cookies file %q: %w", c.cfg.Cookies, err)
+	}
+	defer src.Close()
+
+	tmp, err := os.CreateTemp("", "yt-dlp-cookies-*.txt")
+	if err != nil {
+		return "", func() {}, fmt.Errorf("create temp cookies file: %w", err)
+	}
+
+	cleanup := func() { _ = os.Remove(tmp.Name()) }
+
+	if _, err := io.Copy(tmp, src); err != nil {
+		cleanup()
+		return "", func() {}, fmt.Errorf("copy cookies to temp: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		cleanup()
+		return "", func() {}, fmt.Errorf("close temp cookies file: %w", err)
+	}
+
+	return tmp.Name(), cleanup, nil
 }
