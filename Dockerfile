@@ -16,7 +16,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /out/yt-rpi-player .
 
 FROM --platform=linux/arm64 debian:12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates ffmpeg yt-dlp pulseaudio-utils && \
+    ca-certificates ffmpeg pulseaudio-utils python3 python3-pip && \
+    pip install --no-cache-dir --upgrade yt-dlp && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
