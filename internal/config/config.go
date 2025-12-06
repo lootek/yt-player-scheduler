@@ -35,9 +35,12 @@ type PlayerConfig struct {
 }
 
 type YtDLPConfig struct {
-	Binary    string   `yaml:"binary"`
-	Cookies   string   `yaml:"cookies"`
-	ExtraArgs []string `yaml:"extra_args"`
+	Binary              string   `yaml:"binary"`
+	Cookies             string   `yaml:"cookies"`
+	ExtraArgs           []string `yaml:"extra_args"`
+	POToken             string   `yaml:"po_token"`
+	POTokenProvider     string   `yaml:"po_token_provider"`
+	POTokenProviderArgs []string `yaml:"po_token_provider_args"`
 }
 
 type JobConfig struct {

@@ -4,7 +4,7 @@ FROM --platform=linux/arm64 golang:1.24-bookworm
 
 # Install system dependencies and latest yt-dlp nightly (better EJS support) early to maximize build cache reuse.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates ffmpeg pulseaudio-utils python3 curl nodejs apt-utils && \
+    ca-certificates ffmpeg pulseaudio-utils python3 curl nodejs apt-utils chromium && \
     curl -fsSL https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
     chmod +x /usr/local/bin/yt-dlp && \
     # Ensure node is discoverable by yt-dlp (some distros only provide nodejs).
@@ -26,4 +26,6 @@ COPY config.example.yaml /app/config.example.yaml
 # Point this to the host PulseAudio socket when running the container.
 ENV PULSE_SERVER=unix:/tmp/pulse-socket
 
-ENTRYPOINT ["yt-rpi-player", "-config", "/app/config.yaml", "--run-now"]
+#ENTRYPOINT ["yt-rpi-player", "-config", "/app/config.yaml", "--run-now"]
+
+ENTRYPOINT ["yt-dlp", "--po-token-provider", "chromium", "--po-token-provider-args" "--headless --no-sandbox" "https://www.youtube.com/watch?v=JlIBZ7uTMLE"]

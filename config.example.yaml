@@ -14,6 +14,10 @@ global:
     timeout: 20m
   ytdlp:
     binary: yt-dlp
+    # Provide PO token or provider to solve GVS challenges; optional.
+    po_token: ""
+    po_token_provider: ""
+    po_token_provider_args: []
     # Point to an exported cookies file to use YouTube Premium (avoid ads).
     # Mount it into the container (see docker-compose.yaml) and reference the container path here.
     cookies: /app/cookies.txt

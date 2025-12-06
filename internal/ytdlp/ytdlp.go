@@ -89,7 +89,6 @@ func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEnt
 		"--dump-json",
 		"--no-warnings",
 		"--ignore-errors",
-		// "--js-runtimes", "node",
 		"--remote-components", "ejs:npm",
 		"--limit", fmt.Sprint(limit),
 		searchSpec,
@@ -159,8 +158,13 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 	if !hasExtractorArgs(c.cfg.ExtraArgs) {
 		// Force JS engine detection (helps when yt-dlp fails to see node).
 		attempts = append(attempts,
-			extractorAttempt{args: []string{"--extractor-args", "youtube:js_engine=nodejs"}, useCookies: true},
+			extractorAttempt{args: []string{"--extractor-args", "youtube:js_engine=nodejs,player_client=default"}, useCookies: true},
 		)
+		if cookiePath != "" {
+			attempts = append(attempts,
+				extractorAttempt{args: []string{"--extractor-args", "youtube:js_engine=nodejs,player_client=default"}, useCookies: false},
+			)
+		}
 		// Fallback clients that often bypass signature challenges (without cookies).
 		// attempts = append(attempts,
 		// 	extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=android"}, useCookies: false},
@@ -188,6 +192,16 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 func (c Client) baseArgs() []string {
 	args := make([]string, 0, len(c.cfg.ExtraArgs)+2)
 	args = append(args, c.cfg.ExtraArgs...)
+	if c.cfg.POToken != "" {
+		args = append(args, "--po-token", c.cfg.POToken)
+	}
+	if c.cfg.POTokenProvider != "" {
+		args = append(args, "--po-token-provider", c.cfg.POTokenProvider)
+	}
+	if len(c.cfg.POTokenProviderArgs) > 0 {
+		args = append(args, "--po-token-provider-args")
+		args = append(args, c.cfg.POTokenProviderArgs...)
+	}
 	return args
 }
 
