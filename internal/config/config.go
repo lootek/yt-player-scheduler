@@ -45,6 +45,7 @@ type JobConfig struct {
 	Cron        string   `yaml:"cron"`
 	Keywords    []string `yaml:"keywords"`
 	DateFormat  string   `yaml:"date_format"`
+	DateLocale  string   `yaml:"date_locale"`
 	SearchLimit int      `yaml:"search_limit"`
 }
 

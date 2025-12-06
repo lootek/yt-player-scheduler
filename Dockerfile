@@ -1,14 +1,18 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=$BUILDPLATFORM golang:1.23-bookworm AS builder
+FROM --platform=linux/arm64 golang:1.24-bookworm AS builder
 WORKDIR /src
 
 COPY go.mod go.sum ./
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod go mod download
+#RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod go mod download
+#RUN go mod download
+
+RUN go get golang.org/x/text/language
+RUN go get golang.org/x/text/message
 
 COPY . .
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod \
-    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /out/yt-rpi-player .
+#RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg/mod \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /out/yt-rpi-player .
 
 FROM --platform=linux/arm64 debian:12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
