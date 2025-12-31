@@ -4,7 +4,7 @@ FROM --platform=linux/arm64 golang:1.24-bookworm
 
 # Install system dependencies and latest yt-dlp nightly (better EJS support) early to maximize build cache reuse.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates ffmpeg pulseaudio-utils python3 curl nodejs apt-utils chromium && \
+    ca-certificates ffmpeg pulseaudio-utils python3 curl nodejs npm apt-utils chromium && \
     curl -fsSL https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
     chmod +x /usr/local/bin/yt-dlp && \
     # Ensure node is discoverable by yt-dlp (some distros only provide nodejs).

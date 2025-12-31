@@ -89,7 +89,6 @@ func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEnt
 		"--dump-json",
 		"--no-warnings",
 		"--ignore-errors",
-		"--remote-components", "ejs:npm",
 		"--limit", fmt.Sprint(limit),
 		searchSpec,
 	)
@@ -205,6 +204,9 @@ func (c Client) baseArgs() []string {
 		args = append(args, "--po-token-provider-args")
 		args = append(args, c.cfg.POTokenProviderArgs...)
 	}
+	if !hasRemoteComponents(args) {
+		args = append(args, "--remote-components", "ejs:npm")
+	}
 	return args
 }
 
@@ -301,6 +303,18 @@ func hasExtractorArgs(args []string) bool {
 		}
 		// Handle positional value after flag.
 		if a == "--extractor-args" && i+1 < len(args) && strings.HasPrefix(args[i+1], "youtube:player_client=") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasRemoteComponents(args []string) bool {
+	for _, a := range args {
+		if a == "--remote-components" {
+			return true
+		}
+		if strings.HasPrefix(a, "--remote-components=") {
 			return true
 		}
 	}
