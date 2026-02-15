@@ -165,10 +165,10 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 			)
 		}
 		// Fallback clients that often bypass signature challenges (without cookies).
-		// attempts = append(attempts,
-		// 	extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=android"}, useCookies: false},
-		// 	extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=ios"}, useCookies: false},
-		// )
+		attempts = append(attempts,
+			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=android"}, useCookies: false},
+			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=ios"}, useCookies: false},
+		)
 	}
 
 	var lastErr error
