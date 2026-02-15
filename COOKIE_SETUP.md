@@ -1,139 +1,52 @@
-# Setting Up YouTube Premium Cookies
+# YouTube Premium Cookies Setup
 
-## Why Use Cookies?
-- ✅ Ad-free streams (no ads in videos)
-- ✅ Better format selection
-- ✅ Legitimate personal use of your Premium subscription
-- ✅ Very low risk (your own account, low volume)
+## Benefits
+- Ad-free streams
+- Better format selection
+- Legitimate use of your Premium subscription
 
-## Method 1: Browser Extension (Recommended) ⭐
+## Quick Setup
 
-### Steps:
-1. **Install Extension**:
-   - Safari: Search for "Get cookies.txt" extension
-   - Firefox: https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/
+### 1. Export Cookies
+**Browser extension** (recommended):
+- Install "Get cookies.txt" for Safari/Firefox
+- Visit youtube.com (logged in)
+- Click extension → Export → saves to Downloads
 
-2. **Export Cookies**:
-   - Open Safari/Firefox
-   - Go to https://youtube.com (make sure you're logged in)
-   - Click the extension icon
-   - Click "Export" → saves `cookies.txt` to Downloads
-
-3. **Copy to Repository**:
-   ```bash
-   cp ~/Downloads/cookies.txt ~/projects/github/lootek/yt-daily-player/cookies.txt
-   ```
-
-4. **Deploy to Pi**:
-   ```bash
-   scp ~/projects/github/lootek/yt-daily-player/cookies.txt pi@192.168.10.22:~/yt-daily-player/
-   ssh pi@192.168.10.22 'cd ~/yt-daily-player && docker compose restart'
-   ```
-
-## Method 2: Manual Cookie Export (Firefox)
-
-Firefox makes it easier to access cookies:
-
-1. Open Firefox and go to YouTube (logged in)
-2. Press `F12` to open Developer Tools
-3. Go to "Storage" tab → "Cookies" → "https://youtube.com"
-4. Right-click → "Export All" (if available)
-5. Or manually copy important cookies
-
-### Key Cookies Needed:
-- `VISITOR_INFO1_LIVE`
-- `PREF`
-- `LOGIN_INFO`
-- `SID`, `HSID`, `SSID`, `APISID`, `SAPISID`
-
-## Method 3: Use yt-dlp's Cookie Extraction
-
-yt-dlp can extract cookies from browsers directly:
-
+**Or use yt-dlp**:
 ```bash
-# On your Mac
-cd ~/projects/github/lootek/yt-daily-player
-
-# Extract from Firefox (if you use it)
-yt-dlp --cookies-from-browser firefox --cookies cookies.txt --skip-download https://youtube.com/watch?v=dQw4w9WgXcQ
-
-# Then copy to Pi
-scp cookies.txt pi@192.168.10.22:~/yt-daily-player/
+yt-dlp --cookies-from-browser firefox --cookies cookies.txt --skip-download https://youtube.com
 ```
 
-## Method 4: Safari Manual Export (Most Reliable)
+### 2. Deploy to Pi
+```bash
+scp cookies.txt pi@192.168.10.22:~/yt-daily-player/
+ssh pi@192.168.10.22 'cd ~/yt-daily-player && docker compose restart'
+```
 
-Since Safari's cookie database is protected, use Firefox temporarily:
-
-1. **Install Firefox** (if not already)
-2. **Login to YouTube** in Firefox
-3. **Export cookies** using extension or yt-dlp
-4. **Copy to Pi** as shown above
-
-## Testing
-
-After copying cookies.txt to Pi, test:
-
+### 3. Test
 ```bash
 ssh pi@192.168.10.22
-cd ~/yt-daily-player
-
-# Test cookies work
 docker compose run --rm yt-rpi-player sh -c \
-  'yt-dlp --cookies /app/cookies.txt -F https://youtube.com/watch?v=dQw4w9WgXcQ | head -20'
-
-# Should show Premium formats without ads
+  'yt-dlp --cookies /app/cookies.txt -F VIDEO_URL | head -20'
 ```
 
 ## Troubleshooting
-
-### "No such file or directory: cookies.txt"
 ```bash
-# Make sure file exists on Pi
+# Verify file exists
 ssh pi@192.168.10.22 "ls -la ~/yt-daily-player/cookies.txt"
 
-# Check it's mounted in container
-ssh pi@192.168.10.22 "docker compose -f ~/yt-daily-player/docker-compose.yaml exec yt-rpi-player ls -la /app/cookies.txt"
+# Check mounted in container
+docker compose exec yt-rpi-player ls -la /app/cookies.txt
 ```
 
-### "Cookies expired"
-- Re-export cookies from browser
-- Copy new version to Pi
-- Restart container
+**Cookies expired?** Re-export and restart container.
 
-### "Still seeing ads"
-- Verify you're logged into YouTube Premium in browser
-- Check cookie file has content: `cat cookies.txt | grep youtube`
-- Try re-authenticating in browser before export
+## Security
+- ✅ Read-only in container
+- ✅ Never leaves your Pi
+- ⚠️ In .gitignore (don't commit)
+- ⚠️ Re-export every 1-6 months
 
-## Security Notes
-
-- ✅ **Safe**: cookies.txt is read-only in container
-- ✅ **Private**: File never leaves your Pi
-- ✅ **Personal use**: Legitimate use of your Premium subscription
-- ⚠️ **Don't commit**: cookies.txt is in .gitignore
-- ⚠️ **Expires**: Re-export if streams stop working (typically every 1-6 months)
-
-## Quick Reference
-
-```bash
-# Export cookies (Firefox method)
-yt-dlp --cookies-from-browser firefox --cookies cookies.txt --skip-download https://youtube.com
-
-# Copy to Pi
-scp cookies.txt pi@192.168.10.22:~/yt-daily-player/
-
-# Restart app
-ssh pi@192.168.10.22 'cd ~/yt-daily-player && docker compose restart'
-
-# Verify it's working
-ssh pi@192.168.10.22 'cd ~/yt-daily-player && docker compose logs --tail=50'
-```
-
-## Alternative: No Cookies
-
-If you don't want to set up cookies, **the app works fine without them**! You'll just have:
-- Ads in streams (usually at beginning/end)
-- Standard format selection (still good quality audio)
-
-The app is fully functional either way! 🎉
+## Note
+**App works without cookies** - you'll just have ads in streams.
