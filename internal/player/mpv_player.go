@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/lootek/yt-daily-player/internal/config"
+	"github.com/lootek/yt-rpi-player/internal/config"
 )
 
 // PlayWithMPV plays audio using mpv with built-in yt-dlp support.

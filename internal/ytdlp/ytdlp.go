@@ -165,10 +165,12 @@ func (c Client) ResolveStream(ctx context.Context, videoURL string) (string, err
 			)
 		}
 		// Fallback clients that often bypass signature challenges (without cookies).
-		attempts = append(attempts,
-			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=android"}, useCookies: false},
-			extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=ios"}, useCookies: false},
-		)
+		// NOTE: As of Feb 2026, android/ios clients require GVS PO tokens and fail without them.
+		// Keeping this commented out until PO token generation is implemented.
+		// attempts = append(attempts,
+		// 	extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=android"}, useCookies: false},
+		// 	extractorAttempt{args: []string{"--extractor-args", "youtube:player_client=ios"}, useCookies: false},
+		// )
 	}
 
 	var lastErr error

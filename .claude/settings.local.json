@@ -5,7 +5,9 @@
       "Bash(find:*)",
       "Bash(docker compose:*)",
       "Bash(chmod:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix YouTube stream extraction with mobile client fallbacks\n\nEnable android/ios player client fallbacks that bypass signature challenges.\nAdd mpv alternative player with built-in yt-dlp support for better reliability.\nInclude diagnostic script and comprehensive troubleshooting documentation.\n\nChanges:\n- Enable android/ios client extraction attempts \\(ytdlp.go\\)\n- Add mpv player implementation \\(mpv_player.go\\)\n- Add mpv-based job runner \\(app_mpv.go\\)\n- Install mpv in Docker container \\(Dockerfile\\)\n- Add diagnostic script \\(diagnose.sh\\)\n- Add troubleshooting guides \\(FIXES_APPLIED.md, ALTERNATIVE_APPROACHES.md\\)\n\nFixes stream extraction failures caused by YouTube signature verification.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push)"
     ]
   }
 }
