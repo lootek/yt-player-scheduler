@@ -209,6 +209,8 @@ func (c Client) baseArgs() []string {
 	if !hasRemoteComponents(args) {
 		args = append(args, "--remote-components", "ejs:npm")
 	}
+	// Explicitly tell yt-dlp to use 'node' runtime (not 'nodejs')
+	args = append(args, "--js-runtimes", "node")
 	return args
 }
 
