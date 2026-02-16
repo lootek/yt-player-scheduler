@@ -34,3 +34,4 @@ go.work.sum
 config.yaml
 cookies.txt
 cookies.txt
+.claude/settings.local.json
