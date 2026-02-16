@@ -7,10 +7,14 @@ global:
       - -autoexit
       - -loglevel
       - warning
+      - -af
+      - volume=0.4
       - "{url}"
     env:
-      # Point the container to the host PulseAudio socket; override as needed.
-      PULSE_SERVER: "unix:/tmp/pulse-socket"
+      # Point the container to the host PulseAudio TCP socket
+      PULSE_SERVER: "tcp:localhost:4713"
+      # Force SDL to use PulseAudio driver
+      SDL_AUDIODRIVER: "pulse"
     timeout: 20m
   ytdlp:
     binary: yt-dlp
