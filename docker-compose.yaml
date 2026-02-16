@@ -9,6 +9,7 @@ services:
     restart: unless-stopped
     environment:
       PULSE_SERVER: unix:/tmp/pulse-socket
+      TZ: Europe/Warsaw
     volumes:
       # Main config file for jobs and player settings.
       - ./config.yaml:/app/config.yaml:ro
