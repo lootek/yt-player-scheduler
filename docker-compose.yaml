@@ -8,7 +8,7 @@ services:
     network_mode: host
     restart: unless-stopped
     environment:
-      PULSE_SERVER: unix:/tmp/pulse-socket
+      PULSE_SERVER: tcp:localhost:4713
       TZ: Europe/Warsaw
     volumes:
       # Main config file for jobs and player settings.
