@@ -24,6 +24,7 @@ type Config struct {
 type GlobalConfig struct {
 	SearchLimit int          `yaml:"search_limit"`
 	Player      PlayerConfig `yaml:"player"`
+	MPD         MPDConfig    `yaml:"mpd"`
 	YtDLP       YtDLPConfig  `yaml:"ytdlp"`
 }
 
@@ -32,6 +33,12 @@ type PlayerConfig struct {
 	Args    []string          `yaml:"args"`
 	Env     map[string]string `yaml:"env"`
 	Timeout string            `yaml:"timeout"`
+}
+
+type MPDConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Network string `yaml:"network"`
+	Address string `yaml:"address"`
 }
 
 type YtDLPConfig struct {
@@ -84,6 +91,12 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.Global.YtDLP.Binary == "" {
 		cfg.Global.YtDLP.Binary = "yt-dlp"
+	}
+	if cfg.Global.MPD.Network == "" {
+		cfg.Global.MPD.Network = "tcp"
+	}
+	if cfg.Global.MPD.Address == "" {
+		cfg.Global.MPD.Address = "localhost:6600"
 	}
 	for i := range cfg.Jobs {
 		if cfg.Jobs[i].DateFormat == "" {

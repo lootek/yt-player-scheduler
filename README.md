@@ -6,6 +6,7 @@ A small Go scheduler that searches YouTube daily feeds by keyword + date and pla
 - Cron-like scheduling (via robfig/cron) configured in YAML
 - yt-dlp based search using `ytsearchdate` (keywords + current date)
 - Streams audio only (default player: `ffplay` to PulseAudio)
+- **MPD support**: can add streams directly to a local Music Player Daemon playlist
 - Optional `-run-now` flag to run all jobs once on startup
 
 ## What is yt-dlp?
@@ -23,6 +24,11 @@ global:
     env:
       PULSE_SERVER: "unix:/tmp/pulse-socket" # point to host PulseAudio
     timeout: 20m              # per-job timeout for search + playback
+  # Alternatively, use local MPD server:
+  mpd:
+    enabled: true             # if true, overrides 'player'
+    network: tcp
+    address: localhost:6600
   ytdlp:
     binary: yt-dlp            # override if you have a wrapper script
     cookies: /app/cookies.txt # optional: exported cookies to use YouTube Premium (no ads)

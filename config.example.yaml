@@ -16,6 +16,12 @@ global:
       # Force SDL to use PulseAudio driver
       SDL_AUDIODRIVER: "pulse"
     timeout: 20m
+  # Use a local MPD server instead of a player command.
+  # If enabled: it ignores 'player' section.
+  mpd:
+    enabled: true
+    network: tcp
+    address: localhost:6600
   ytdlp:
     binary: yt-dlp
     # Optional: override user agent (e.g., Safari) if needed.
