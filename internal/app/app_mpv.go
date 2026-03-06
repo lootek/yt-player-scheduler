@@ -38,7 +38,7 @@ func (a *App) RunJobWithMPV(ctx context.Context, job config.JobConfig) error {
 
 	if a.cfg.Global.YtDLP.DownloadDir != "" {
 		a.logger.Printf("[job:%s] downloading to %s", jobName, a.cfg.Global.YtDLP.DownloadDir)
-		localPath, err := a.ytdlp.Download(ctx, videoURL)
+		localPath, err := a.ytdlp.Download(ctx, videoURL, jobName)
 		if err != nil {
 			return fmt.Errorf("download for job: %w", err)
 		}
