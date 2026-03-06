@@ -22,6 +22,8 @@ global:
     enabled: true
     network: tcp
     address: localhost:6600
+    password: "" # Optional: provide a password if MPD requires authentication
+    music_root: "/var/lib/mpd/music" # Optional: if you use DownloadDir, this helps MPD find local files
   ytdlp:
     binary: yt-dlp
     # Optional: override user agent (e.g., Safari) if needed.

@@ -36,9 +36,11 @@ type PlayerConfig struct {
 }
 
 type MPDConfig struct {
-	Enabled bool   `yaml:"enabled"`
-	Network string `yaml:"network"`
-	Address string `yaml:"address"`
+	Enabled   bool   `yaml:"enabled"`
+	Network   string `yaml:"network"`
+	Address   string `yaml:"address"`
+	Password  string `yaml:"password"`
+	MusicRoot string `yaml:"music_root"`
 }
 
 type YtDLPConfig struct {

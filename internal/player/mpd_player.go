@@ -3,6 +3,8 @@ package player
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fhs/gompd/v2/mpd"
@@ -11,11 +13,28 @@ import (
 
 // PlayWithMPD adds the URI to the end of the MPD playlist and starts playing it.
 func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, uri string) error {
-	client, err := mpd.Dial(cfg.Network, cfg.Address)
+	var client *mpd.Client
+	var err error
+
+	if cfg.Password != "" {
+		client, err = mpd.DialAuthenticated(cfg.Network, cfg.Address, cfg.Password)
+	} else {
+		client, err = mpd.Dial(cfg.Network, cfg.Address)
+	}
+
 	if err != nil {
 		return fmt.Errorf("mpd dial (%s:%s): %w", cfg.Network, cfg.Address, err)
 	}
 	defer client.Close()
+
+	// If the URI is a local path and we have a MusicRoot configured,
+	// try to make the path relative to MusicRoot so MPD can find it.
+	if cfg.MusicRoot != "" && strings.HasPrefix(uri, "/") {
+		rel, err := filepath.Rel(cfg.MusicRoot, uri)
+		if err == nil && !strings.HasPrefix(rel, "..") {
+			uri = rel
+		}
+	}
 
 	// Add to the end of the playlist and get its ID
 	id, err := client.AddID(uri, -1)
