@@ -12,7 +12,7 @@ import (
 )
 
 // PlayWithMPD adds the URI to the end of the MPD playlist and starts playing it.
-func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, uri string) error {
+func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, uri string) error {
 	var client *mpd.Client
 	var err error
 
@@ -27,12 +27,12 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, uri string) error {
 	}
 	defer client.Close()
 
-	// If the URI is a local path and we have a MusicRoot configured,
-	// try to make the path relative to MusicRoot so MPD can find it.
-	if cfg.MusicRoot != "" && strings.HasPrefix(uri, "/") {
-		rel, err := filepath.Rel(cfg.MusicRoot, uri)
-		if err == nil && !strings.HasPrefix(rel, "..") {
-			uri = rel
+	// If the URI is within DownloadDir and we have a MusicRoot configured,
+	// replace the DownloadDir prefix with MusicRoot so MPD can find it.
+	if downloadDir != "" && cfg.MusicRoot != "" && strings.HasPrefix(uri, downloadDir) {
+		rel, err := filepath.Rel(downloadDir, uri)
+		if err == nil {
+			uri = filepath.Join(cfg.MusicRoot, rel)
 		}
 	}
 

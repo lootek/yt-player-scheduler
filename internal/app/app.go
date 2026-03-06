@@ -67,7 +67,7 @@ func (a *App) RunJob(ctx context.Context, job config.JobConfig) error {
 	}
 
 	if a.cfg.Global.MPD.Enabled {
-		if err := player.PlayWithMPD(ctx, a.cfg.Global.MPD, playURL); err != nil {
+		if err := player.PlayWithMPD(ctx, a.cfg.Global.MPD, a.cfg.Global.YtDLP.DownloadDir, playURL); err != nil {
 			return fmt.Errorf("play audio via MPD: %w", err)
 		}
 	} else if a.cfg.Global.Player.Command == "mpv" {
