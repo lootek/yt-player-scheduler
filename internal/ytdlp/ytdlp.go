@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/lootek/yt-rpi-player/internal/config"
@@ -22,12 +23,72 @@ type Client struct {
 type VideoEntry struct {
 	ID         string `json:"id"`
 	Title      string `json:"title"`
+	Uploader   string `json:"uploader"`
 	WebpageURL string `json:"webpage_url"`
 	URL        string `json:"url"`
 }
 
 func New(cfg config.YtDLPConfig) Client {
 	return Client{cfg: cfg}
+}
+
+// Download downloads the audio stream to the configured DownloadDir.
+// It returns the absolute path to the downloaded file.
+func (c Client) Download(ctx context.Context, videoURL string) (string, error) {
+	if c.cfg.DownloadDir == "" {
+		return "", errors.New("download_dir not configured")
+	}
+
+	if err := os.MkdirAll(c.cfg.DownloadDir, 0755); err != nil {
+		return "", fmt.Errorf("create download directory: %w", err)
+	}
+
+	cookiePath, cleanup, err := c.prepareCookies()
+	if err != nil {
+		return "", fmt.Errorf("prepare cookies: %w", err)
+	}
+	defer cleanup()
+
+	// Template for the output filename: "author - title [id].ext"
+	outputTemplate := filepath.Join(c.cfg.DownloadDir, "%(uploader)s - %(title)s [%(id)s].%(ext)s")
+
+	args := append(c.baseArgs(),
+		"-x", // Extract audio
+		"--audio-format", "m4a",
+		"--output", outputTemplate,
+		"--print", "after_move:filepath", // Print final filename after download
+		"--no-warnings",
+		videoURL,
+	)
+	if cookiePath != "" {
+		args = append(args, "--cookies", cookiePath)
+	}
+
+	cmd := exec.CommandContext(ctx, c.binary(), args...)
+	cmdLine := cmd.String()
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderr)
+
+	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return "", fmt.Errorf("yt-dlp download (%s): %s: %w", cmdLine, msg, err)
+		}
+		return "", fmt.Errorf("yt-dlp download (%s): %w", cmdLine, err)
+	}
+
+	filePath := strings.TrimSpace(stdout.String())
+	if filePath == "" {
+		return "", fmt.Errorf("yt-dlp download (%s): empty output (no file path)", cmdLine)
+	}
+
+	// In case multiple lines were printed (e.g. if yt-dlp was already downloading something else)
+	// we take the last line which should be our filepath from 'after_move:filepath'
+	lines := strings.Split(filePath, "\n")
+	filePath = strings.TrimSpace(lines[len(lines)-1])
+
+	return filePath, nil
 }
 
 // CheckAuth verifies that yt-dlp can access Watch Later using the configured cookies.

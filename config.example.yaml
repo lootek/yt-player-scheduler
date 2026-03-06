@@ -33,6 +33,9 @@ global:
     # Point to an exported cookies file to use YouTube Premium (avoid ads).
     # Mount it into the container (see docker-compose.yaml) and reference the container path here.
     cookies: /app/cookies.txt
+    # Optional: download audio to a local directory before playing.
+    # This helps avoid HTTP 403 Forbidden errors when MPD tries to decode streams directly.
+    download_dir: /app/downloads
     extra_args: []
 
 jobs:

@@ -36,9 +36,20 @@ func (a *App) RunJobWithMPV(ctx context.Context, job config.JobConfig) error {
 	videoURL := results[0].VideoURL()
 	a.logger.Printf("[job:%s] playing %q (%s)", jobName, results[0].Title, videoURL)
 
-	// Use mpv directly with YouTube URL - no stream extraction needed
-	if err := player.PlayWithMPV(ctx, a.cfg.Global.Player, videoURL); err != nil {
-		return fmt.Errorf("play audio: %w", err)
+	if a.cfg.Global.YtDLP.DownloadDir != "" {
+		a.logger.Printf("[job:%s] downloading to %s", jobName, a.cfg.Global.YtDLP.DownloadDir)
+		localPath, err := a.ytdlp.Download(ctx, videoURL)
+		if err != nil {
+			return fmt.Errorf("download for job: %w", err)
+		}
+		if err := player.Play(ctx, a.cfg.Global.Player, localPath); err != nil {
+			return fmt.Errorf("play local audio: %w", err)
+		}
+	} else {
+		// Use mpv directly with YouTube URL - no stream extraction needed
+		if err := player.PlayWithMPV(ctx, a.cfg.Global.Player, videoURL); err != nil {
+			return fmt.Errorf("play audio: %w", err)
+		}
 	}
 	a.logger.Printf("[job:%s] playback finished", jobName)
 	return nil

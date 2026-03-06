@@ -44,6 +44,7 @@ type MPDConfig struct {
 type YtDLPConfig struct {
 	Binary              string   `yaml:"binary"`
 	Cookies             string   `yaml:"cookies"`
+	DownloadDir         string   `yaml:"download_dir"`
 	ExtraArgs           []string `yaml:"extra_args"`
 	POToken             string   `yaml:"po_token"`
 	POTokenProvider     string   `yaml:"po_token_provider"`
