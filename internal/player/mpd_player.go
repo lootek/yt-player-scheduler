@@ -39,12 +39,12 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, uri string) error {
 	// Add to the end of the playlist and get its ID
 	id, err := client.AddID(uri, -1)
 	if err != nil {
-		return fmt.Errorf("mpd addid: %w", err)
+		return fmt.Errorf("mpd addid on %v: %w", uri, err)
 	}
 
 	// Start playing the added item
 	if err := client.PlayID(id); err != nil {
-		return fmt.Errorf("mpd playid: %w", err)
+		return fmt.Errorf("mpd playid on %v: %w", id, err)
 	}
 
 	// Monitor playback status until it finishes or context is cancelled.
