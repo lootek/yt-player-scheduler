@@ -50,7 +50,8 @@ func (c Client) Download(ctx context.Context, videoURL string) (string, error) {
 	defer cleanup()
 
 	// Template for the output filename: "author - title [id].ext"
-	outputTemplate := filepath.Join(c.cfg.DownloadDir, "%(uploader)s - %(title)s [%(id)s].%(ext)s")
+	// outputTemplate := filepath.Join(c.cfg.DownloadDir, "%(uploader)s - %(title)s [%(id)s].%(ext)s")
+	outputTemplate := filepath.Join(c.cfg.DownloadDir, "%(id)s.%(ext)s")
 
 	args := append(c.baseArgs(),
 		"-x", // Extract audio
