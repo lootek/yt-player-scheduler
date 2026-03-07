@@ -3,6 +3,7 @@ package player
 import (
 	"context"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 	"time"
@@ -56,7 +57,7 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 
 	// Monitor playback status until it finishes or context is cancelled.
 	// This maintains consistency with other player implementations that block.
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -66,14 +67,16 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 		case <-ticker.C:
 			status, err := client.Status()
 			if err != nil {
-				return fmt.Errorf("mpd status: %w", err)
+				return fmt.Errorf("mpd status failed: %w", err)
 			}
+
+			log.Printf("mpd status: %#v", status)
 
 			// If MPD is not playing anything, or playing a different ID, we assume we're done.
 			// Note: status["songid"] is the ID of the current song.
-			if status["state"] != "play" || status["songid"] != fmt.Sprintf("%d", id) {
-				return nil
-			}
+			// if status["state"] != "play" || status["songid"] != fmt.Sprintf("%d", id) {
+			// 	return nil
+			// }
 		}
 	}
 }
