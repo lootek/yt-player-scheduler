@@ -35,8 +35,8 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 			uri = rel
 		}
 
-		if _, err := client.Update(downloadDir); err != nil {
-			return fmt.Errorf("mpd update failed on %s: %w", downloadDir, err)
+		if _, err := client.Update(rel); err != nil {
+			return fmt.Errorf("mpd update failed on %s: %w", rel, err)
 		}
 
 		// wait for mpd update
