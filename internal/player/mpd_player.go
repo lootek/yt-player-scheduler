@@ -29,22 +29,29 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 
 	// If the URI is within DownloadDir and we have a MusicRoot configured,
 	// replace the DownloadDir prefix with MusicRoot so MPD can find it.
-	if downloadDir != "" && cfg.MusicRoot != "" && strings.HasPrefix(uri, downloadDir) {
-		rel, err := filepath.Rel(downloadDir, uri)
+	if downloadDir != "" && cfg.MusicRoot != "" && strings.HasPrefix(uri, downloadDir) && strings.HasPrefix(downloadDir, cfg.MusicRoot) {
+		rel, err := filepath.Rel(cfg.MusicRoot, uri)
 		if err == nil {
-			uri = filepath.Join(cfg.MusicRoot, rel)
+			uri = rel
 		}
+
+		if _, err := client.Update(downloadDir); err != nil {
+			return fmt.Errorf("mpd update failed on %s: %w", downloadDir, err)
+		}
+
+		// wait for mpd update
+		time.Sleep(time.Second * 30)
 	}
 
 	// Add to the end of the playlist and get its ID
 	id, err := client.AddID(uri, -1)
 	if err != nil {
-		return fmt.Errorf("mpd addid on %v: %w", uri, err)
+		return fmt.Errorf("mpd addid failed on %v: %w", uri, err)
 	}
 
 	// Start playing the added item
 	if err := client.PlayID(id); err != nil {
-		return fmt.Errorf("mpd playid on %v: %w", id, err)
+		return fmt.Errorf("mpd playid failed on %v: %w", id, err)
 	}
 
 	// Monitor playback status until it finishes or context is cancelled.
