@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,7 +18,8 @@ import (
 )
 
 type Client struct {
-	cfg config.YtDLPConfig
+	cfg    config.YtDLPConfig
+	logger *log.Logger
 }
 
 type VideoEntry struct {
@@ -28,8 +30,8 @@ type VideoEntry struct {
 	URL        string `json:"url"`
 }
 
-func New(cfg config.YtDLPConfig) Client {
-	return Client{cfg: cfg}
+func New(cfg config.YtDLPConfig, logger *log.Logger) Client {
+	return Client{cfg: cfg, logger: logger}
 }
 
 // Download downloads the audio stream to the configured DownloadDir.
@@ -49,7 +51,6 @@ func (c Client) Download(ctx context.Context, videoURL string, jobName string) (
 	}
 	defer cleanup()
 
-	// Template for the output filename: "author - title [id].ext"
 	// outputTemplate := filepath.Join(c.cfg.DownloadDir, "%(uploader)s - %(title)s [%(id)s].%(ext)s")
 	outputTemplate := filepath.Join(c.cfg.DownloadDir, jobName+"_%(id)s.%(ext)s")
 
@@ -78,6 +79,10 @@ func (c Client) Download(ctx context.Context, videoURL string, jobName string) (
 		}
 		return "", fmt.Errorf("yt-dlp download (%s): %w", cmdLine, err)
 	}
+
+	c.logger.Printf("yt-dlp cmd: %v", cmdLine)
+	c.logger.Printf("yt-dlp stdout: %v", stdout.String())
+	c.logger.Printf("yt-dlp stderr: %v", stderr.String())
 
 	filePath := strings.TrimSpace(stdout.String())
 	if filePath == "" {

@@ -22,7 +22,7 @@ func New(cfg config.Config, logger *log.Logger) *App {
 	return &App{
 		cfg:    cfg,
 		logger: logger,
-		ytdlp:  ytdlp.New(cfg.Global.YtDLP),
+		ytdlp:  ytdlp.New(cfg.Global.YtDLP, logger),
 	}
 }
 
