@@ -36,6 +36,7 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 			uri = rel
 		}
 
+		log.Printf("updating mpd at %q...", rel)
 		if _, err := client.Update(rel); err != nil {
 			return fmt.Errorf("mpd update failed on %s: %w", rel, err)
 		}
@@ -49,6 +50,8 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 	if err != nil {
 		return fmt.Errorf("mpd addid failed on %v: %w", uri, err)
 	}
+
+	log.Printf("added %q to playlist at %v", uri, id)
 
 	// Start playing the added item
 	if err := client.PlayID(id); err != nil {
