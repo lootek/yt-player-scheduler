@@ -18,7 +18,8 @@ services:
       # Optional: mount yt-dlp cookies if needed for authenticated feeds.
       - ./cookies.txt:/app/cookies.txt:ro
       # Optional: mount a directory for downloaded audio files.
-      - /media/music/youtube/yt-rpi-player-cache/brewiarz:/app/cache
+      #- /media/music/youtube/yt-rpi-player-cache/brewiarz:/app/cache
+      - /media/music/youtube/yt-rpi-player-cache/brewiarz:/media/music/youtube/yt-rpi-player-cache/brewiarz
     # Uncomment if your setup requires direct ALSA device access (usually not needed with PulseAudio).
     # devices:
     #   - /dev/snd
