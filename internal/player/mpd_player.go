@@ -36,7 +36,7 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 			uri = rel
 		}
 
-		log.Printf("updating mpd at %q...", rel)
+		// log.Printf("updating mpd at %q...", rel)
 		if _, err := client.Update(rel); err != nil {
 			return fmt.Errorf("mpd update failed on %s: %w", rel, err)
 		}
@@ -51,7 +51,7 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 		return fmt.Errorf("mpd addid failed on %v: %w", uri, err)
 	}
 
-	log.Printf("added %q to playlist at %v", uri, id)
+	// log.Printf("added %q to playlist at %v", uri, id)
 
 	// Start playing the added item
 	if err := client.PlayID(id); err != nil {
@@ -73,13 +73,12 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 				return fmt.Errorf("mpd status failed: %w", err)
 			}
 
-			log.Printf("mpd status: %#v", status)
-
 			// If MPD is not playing anything, or playing a different ID, we assume we're done.
 			// Note: status["songid"] is the ID of the current song.
-			// if status["state"] != "play" || status["songid"] != fmt.Sprintf("%d", id) {
-			// 	return nil
-			// }
+			if status["state"] != "play" || status["songid"] != fmt.Sprintf("%d", id) {
+				log.Printf("mpd status: %#v", status)
+				return nil
+			}
 		}
 	}
 }
