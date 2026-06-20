@@ -23,7 +23,7 @@ global:
     network: tcp
     address: localhost:6600
     password: "" # Optional: provide a password if MPD requires authentication
-    music_root: "/var/lib/mpd/music" # Optional: if you use DownloadDir, this helps MPD find local files
+    music_root: "/media/music" # Optional: parent directory of download_dir so MPD can resolve local files
   ytdlp:
     binary: yt-dlp
     # Optional: override user agent (e.g., Safari) if needed.
@@ -37,8 +37,20 @@ global:
     cookies: /app/cookies.txt
     # Optional: download audio to a local directory before playing.
     # This helps avoid HTTP 403 Forbidden errors when MPD tries to decode streams directly.
+    # Cron jobs use this directory; the web UI has its own download_dir below.
     download_dir: /app/downloads
     extra_args: []
+  # Optional: on-demand web UI for downloading videos/playlists.
+  web_ui:
+    enabled: false
+    listen: ":8080"
+    username: ""          # Basic auth username; leave empty to disable authentication
+    password: ""          # Basic auth password
+    download_dir: "/media/music/youtube" # target directory for web UI downloads
+    subdir: ""            # optional global subdir under download_dir
+    max_concurrent: 2
+    timeout: "2h"
+    history_path: ""      # empty = history.jsonl next to config.yaml
 
 jobs:
   - name: morning-feed

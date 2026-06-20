@@ -12,6 +12,91 @@ import (
 	"github.com/lootek/yt-rpi-player/internal/config"
 )
 
+// EnqueueMPD appends one or more URIs to the MPD playlist without blocking.
+// If autoPlay is true, it starts playing the first added item.
+func EnqueueMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, uris []string, autoPlay bool) error {
+	if len(uris) == 0 {
+		return nil
+	}
+
+	var client *mpd.Client
+	var err error
+
+	if cfg.Password != "" {
+		client, err = mpd.DialAuthenticated(cfg.Network, cfg.Address, cfg.Password)
+	} else {
+		client, err = mpd.Dial(cfg.Network, cfg.Address)
+	}
+
+	if err != nil {
+		return fmt.Errorf("mpd dial (%s:%s): %w", cfg.Network, cfg.Address, err)
+	}
+	defer client.Close()
+
+	updatedDirs := make(map[string]struct{})
+	var relURIs []string
+	firstID := -1
+
+	for _, uri := range uris {
+		rel, ok := mapToMusicRoot(cfg, downloadDir, uri)
+		if ok {
+			parent := filepath.Dir(rel)
+			if parent != "." {
+				updatedDirs[parent] = struct{}{}
+			}
+		}
+		relURIs = append(relURIs, rel)
+	}
+
+	for dir := range updatedDirs {
+		if _, err := client.Update(dir); err != nil {
+			return fmt.Errorf("mpd update failed on %s: %w", dir, err)
+		}
+	}
+	if len(updatedDirs) > 0 {
+		// wait for mpd update
+		time.Sleep(time.Second * 30)
+	}
+
+	for _, rel := range relURIs {
+		id, err := client.AddID(rel, -1)
+		if err != nil {
+			return fmt.Errorf("mpd addid failed on %v: %w", rel, err)
+		}
+		if firstID == -1 {
+			firstID = id
+		}
+	}
+
+	if autoPlay && firstID != -1 {
+		if err := client.PlayID(firstID); err != nil {
+			return fmt.Errorf("mpd playid failed on %v: %w", firstID, err)
+		}
+	}
+
+	return nil
+}
+
+// mapToMusicRoot rewrites an absolute file path into a path relative to
+// cfg.MusicRoot when the file lives under downloadDir which itself lives
+// under MusicRoot. The boolean indicates whether a rewrite happened.
+func mapToMusicRoot(cfg config.MPDConfig, downloadDir, uri string) (string, bool) {
+	if downloadDir == "" || cfg.MusicRoot == "" {
+		return uri, false
+	}
+	if !strings.HasPrefix(uri, downloadDir) {
+		return uri, false
+	}
+	if !strings.HasPrefix(downloadDir, cfg.MusicRoot) {
+		return uri, false
+	}
+	rel, err := filepath.Rel(cfg.MusicRoot, uri)
+	if err != nil {
+		return uri, false
+	}
+	return rel, true
+}
+
 // PlayWithMPD adds the URI to the end of the MPD playlist and starts playing it.
 func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, uri string) error {
 	var client *mpd.Client
@@ -30,11 +115,9 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 
 	// If the URI is within DownloadDir and we have a MusicRoot configured,
 	// replace the DownloadDir prefix with MusicRoot so MPD can find it.
-	if downloadDir != "" && cfg.MusicRoot != "" && strings.HasPrefix(uri, downloadDir) && strings.HasPrefix(downloadDir, cfg.MusicRoot) {
-		rel, err := filepath.Rel(cfg.MusicRoot, uri)
-		if err == nil {
-			uri = rel
-		}
+	rel, ok := mapToMusicRoot(cfg, downloadDir, uri)
+	if ok {
+		uri = rel
 
 		// log.Printf("updating mpd at %q...", rel)
 		if _, err := client.Update(rel); err != nil {

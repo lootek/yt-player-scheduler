@@ -23,6 +23,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /usr/local/bin/yt-rpi-play
 
 COPY config.example.yaml /app/config.example.yaml
 
+EXPOSE 8080
+
 # Point this to the host PulseAudio socket when running the container.
 ENV PULSE_SERVER=unix:/tmp/pulse-socket
 

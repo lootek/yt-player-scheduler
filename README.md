@@ -94,6 +94,45 @@ Key bits:
 3. When using Docker/Compose, mount the file: add `- ./cookies.txt:/app/cookies.txt:ro` under `volumes` for the service.
 4. Rebuild/restart the container. All searches and stream resolutions will use the cookies so ads should not play.
 
+## Web UI
+Enable the on-demand download UI in `config.yaml`:
+
+```yaml
+global:
+  web_ui:
+    enabled: true
+    listen: ":8080"
+    username: "pi"        # Basic auth username (empty = no auth)
+    password: "secret"    # Basic auth password
+    download_dir: "/media/music/youtube"
+    subdir: ""            # optional global subdir under download_dir
+    max_concurrent: 2
+    timeout: "2h"
+```
+
+Or start it with the `-web-ui` flag:
+
+```bash
+./yt-rpi-player -config config.yaml -web-ui
+```
+
+Open `http://ithilien.local:8080/` (host networking is used in the compose file). Paste a YouTube video, channel, or playlist URL and choose:
+
+- **Queue in MPD** — add downloaded file(s) to the MPD playlist.
+- **Auto-play now** — start playing the first added item (only meaningful with MPD).
+- **Download video too** — download full video+audio as MKV; otherwise audio-only M4A.
+
+Downloads use the legacy `yt.sh` naming pattern:
+`<download_dir>/<uploader>/<playlist_title>/<title> (<id>).<ext>` and write to `archive.txt` so re-downloads are skipped.
+
+A durable `history.jsonl` is kept next to `config.yaml`. The status page auto-refreshes every 5 seconds.
+
+### Security notes
+- URL input is passed directly as a `yt-dlp` command argument; no shell interpolation is used.
+- Set `web_ui.username` and `web_ui.password` for Basic auth. Leaving them empty disables authentication.
+- Concurrent downloads share the same `archive.txt`; rare archive races are a known caveat.
+
 ## Flags
 - `-config path`: path to YAML config (default `config.yaml`).
 - `-run-now`: execute all jobs once immediately after startup before scheduling.
+- `-web-ui`: start the web UI server alongside the scheduler.

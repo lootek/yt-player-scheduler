@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -13,17 +16,25 @@ import (
 
 	"github.com/lootek/yt-rpi-player/internal/app"
 	"github.com/lootek/yt-rpi-player/internal/config"
+	"github.com/lootek/yt-rpi-player/internal/webui"
 )
 
 func main() {
 	configPath := flag.String("config", "config.yaml", "path to YAML configuration")
 	runImmediately := flag.Bool("run-now", false, "run all jobs once on startup before scheduling")
+	webUI := flag.Bool("web-ui", false, "start the web UI server alongside the scheduler")
 	flag.Parse()
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
+	cfg.Global.WebUI.Enabled = cfg.Global.WebUI.Enabled || *webUI
+
+	if len(cfg.Jobs) == 0 && !cfg.Global.WebUI.Enabled {
+		log.Fatalf("no jobs configured and web UI is disabled")
+	}
+
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -53,6 +64,11 @@ func main() {
 	for _, job := range cfg.Jobs {
 		job := job
 		_, err := c.AddFunc(job.Cron, func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Printf("[job:%s] panic recovered: %v", job.Name, r)
+				}
+			}()
 			jobCtx, cancel := context.WithTimeout(ctx, playerTimeout)
 			defer cancel()
 			if err := application.RunJob(jobCtx, job); err != nil {
@@ -76,10 +92,48 @@ func main() {
 		}
 	}
 
+	var srv *webui.Server
+	if cfg.Global.WebUI.Enabled {
+		absConfigPath, err := filepath.Abs(*configPath)
+		if err != nil {
+			log.Fatalf("resolve config path: %v", err)
+		}
+		historyDir := filepath.Dir(absConfigPath)
+
+		webTimeout, err := time.ParseDuration(cfg.Global.WebUI.Timeout)
+		if err != nil {
+			log.Fatalf("invalid web_ui.timeout %q: %v", cfg.Global.WebUI.Timeout, err)
+		}
+
+		history := webui.OpenHistory(historyDir)
+		svc := webui.NewService(cfg, logger, history)
+		if webTimeout > 0 {
+			svc.SetTimeout(webTimeout)
+		}
+		go svc.Start(ctx)
+
+		srv = webui.NewServer(svc, logger)
+		go func() {
+			logger.Printf("web UI listening on %s", cfg.Global.WebUI.Listen)
+			if err := srv.ListenAndServe(cfg.Global.WebUI.Listen); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Printf("web UI server error: %v", err)
+			}
+		}()
+	}
+
 	c.Start()
 	logger.Printf("scheduler started; waiting for jobs (press Ctrl+C to exit)")
 	<-ctx.Done()
 	stop()
 	logger.Printf("shutting down")
+
+	if srv != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			logger.Printf("web UI shutdown error: %v", err)
+		}
+	}
+
 	c.Stop()
 }

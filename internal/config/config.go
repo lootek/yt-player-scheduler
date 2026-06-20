@@ -26,6 +26,7 @@ type GlobalConfig struct {
 	Player      PlayerConfig `yaml:"player"`
 	MPD         MPDConfig    `yaml:"mpd"`
 	YtDLP       YtDLPConfig  `yaml:"ytdlp"`
+	WebUI       WebUIConfig  `yaml:"web_ui"`
 }
 
 type PlayerConfig struct {
@@ -54,6 +55,18 @@ type YtDLPConfig struct {
 	UserAgent           string   `yaml:"user_agent"`
 }
 
+type WebUIConfig struct {
+	Enabled       bool   `yaml:"enabled"`
+	Listen        string `yaml:"listen"`
+	Username      string `yaml:"username"`
+	Password      string `yaml:"password"`
+	DownloadDir   string `yaml:"download_dir"`
+	Subdir        string `yaml:"subdir"`
+	MaxConcurrent int    `yaml:"max_concurrent"`
+	Timeout       string `yaml:"timeout"`
+	HistoryPath   string `yaml:"history_path"`
+}
+
 type JobConfig struct {
 	Name        string   `yaml:"name"`
 	Cron        string   `yaml:"cron"`
@@ -73,8 +86,8 @@ func Load(path string) (Config, error) {
 		return cfg, fmt.Errorf("parse yaml: %w", err)
 	}
 	applyDefaults(&cfg)
-	if len(cfg.Jobs) == 0 {
-		return cfg, errors.New("no jobs configured")
+	if len(cfg.Jobs) == 0 && !cfg.Global.WebUI.Enabled {
+		return cfg, errors.New("no jobs configured and web UI is disabled")
 	}
 	return cfg, nil
 }
@@ -100,6 +113,18 @@ func applyDefaults(cfg *Config) {
 	}
 	if cfg.Global.MPD.Address == "" {
 		cfg.Global.MPD.Address = "localhost:6600"
+	}
+	if cfg.Global.WebUI.Listen == "" {
+		cfg.Global.WebUI.Listen = ":8080"
+	}
+	if cfg.Global.WebUI.MaxConcurrent <= 0 {
+		cfg.Global.WebUI.MaxConcurrent = 2
+	}
+	if cfg.Global.WebUI.Timeout == "" {
+		cfg.Global.WebUI.Timeout = "2h"
+	}
+	if cfg.Global.WebUI.DownloadDir == "" {
+		cfg.Global.WebUI.DownloadDir = cfg.Global.YtDLP.DownloadDir
 	}
 	for i := range cfg.Jobs {
 		if cfg.Jobs[i].DateFormat == "" {

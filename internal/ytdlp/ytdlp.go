@@ -97,6 +97,117 @@ func (c Client) Download(ctx context.Context, videoURL string, jobName string) (
 	return filePath, nil
 }
 
+// DownloadMediaRequest configures an on-demand download via the web UI.
+type DownloadMediaRequest struct {
+	URL         string
+	DownloadDir string
+	Subdir      string
+	ArchivePath string
+	Video       bool
+	LogWriter   io.Writer
+}
+
+// DownloadMedia downloads an arbitrary YouTube URL (video, playlist, or channel).
+// It returns the absolute paths of all completed files.
+func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) ([]string, error) {
+	if req.DownloadDir == "" {
+		return nil, errors.New("download_dir not configured")
+	}
+
+	if err := os.MkdirAll(req.DownloadDir, 0755); err != nil {
+		return nil, fmt.Errorf("create download directory: %w", err)
+	}
+
+	archivePath := req.ArchivePath
+	if archivePath == "" {
+		archivePath = filepath.Join(req.DownloadDir, "archive.txt")
+	}
+
+	cookiePath, cleanup, err := c.prepareCookies()
+	if err != nil {
+		return nil, fmt.Errorf("prepare cookies: %w", err)
+	}
+	defer cleanup()
+
+	outputTemplate := req.DownloadDir
+	if req.Subdir != "" {
+		outputTemplate = filepath.Join(outputTemplate, req.Subdir)
+	}
+	outputTemplate = filepath.Join(outputTemplate, "%(uploader)s/%(playlist_title)s/%(title)s (%(id)s).%(ext)s")
+
+	args := append(c.baseArgs(),
+		"-i",
+		"--add-metadata",
+		"--download-archive", archivePath,
+		"--output", outputTemplate,
+		"--newline",
+		"--progress",
+		"--print", "after_move:filepath",
+	)
+	if req.Video {
+		args = append(args,
+			"-f", "bestvideo+bestaudio",
+			"--merge-output-format", "mkv",
+		)
+	} else {
+		args = append(args,
+			"-x",
+			"--audio-format", "m4a",
+		)
+	}
+	if cookiePath != "" {
+		args = append(args, "--cookies", cookiePath)
+	}
+	args = append(args, req.URL)
+
+	cmd := exec.CommandContext(ctx, c.binary(), args...)
+	cmdLine := cmd.String()
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("pipe stdout (%s): %w", cmdLine, err)
+	}
+
+	var stderrBuf bytes.Buffer
+	stderrWriters := []io.Writer{os.Stderr, &stderrBuf}
+	if req.LogWriter != nil {
+		stderrWriters = append(stderrWriters, req.LogWriter)
+	}
+	cmd.Stderr = io.MultiWriter(stderrWriters...)
+
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("start yt-dlp (%s): %w", cmdLine, err)
+	}
+
+	var files []string
+	scanner := bufio.NewScanner(stdout)
+	lineWriter := io.MultiWriter(os.Stdout)
+	if req.LogWriter != nil {
+		lineWriter = io.MultiWriter(os.Stdout, req.LogWriter)
+	}
+	for scanner.Scan() {
+		line := scanner.Text()
+		fmt.Fprintln(lineWriter, line)
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, req.DownloadDir) {
+			files = append(files, trimmed)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan yt-dlp output (%s): %w", cmdLine, err)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		if msg := strings.TrimSpace(stderrBuf.String()); msg != "" {
+			return files, fmt.Errorf("yt-dlp download (%s): %s: %w", cmdLine, msg, err)
+		}
+		return files, fmt.Errorf("yt-dlp download (%s): %w", cmdLine, err)
+	}
+
+	c.logger.Printf("yt-dlp cmd: %v", cmdLine)
+	return files, nil
+}
+
 // CheckAuth verifies that yt-dlp can access Watch Later using the configured cookies.
 // It returns the title of the first item when successful.
 func (c Client) CheckAuth(ctx context.Context) (string, error) {

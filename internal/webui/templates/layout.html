@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>yt-rpi-player — web UI</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.5rem; }
+    form { border: 1px solid #ccc; padding: 1rem; border-radius: 6px; }
+    label { display: block; margin: .5rem 0; }
+    input[type="text"], input[type="url"] { width: 100%; box-sizing: border-box; padding: .4rem; }
+    button { padding: .5rem 1rem; margin-top: .5rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { text-align: left; padding: .4rem; border-bottom: 1px solid #ddd; }
+    .status-queued { color: #666; }
+    .status-running { color: #06c; }
+    .status-done { color: #080; }
+    .status-failed { color: #c00; }
+    .mono { font-family: ui-monospace, monospace; font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <h1>yt-rpi-player — web UI</h1>
+  {{template "content" .}}
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

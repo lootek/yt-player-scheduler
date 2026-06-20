@@ -1,0 +1,37 @@
+{{define "content"}}
+<form action="/download" method="post">
+  <label>
+    YouTube URL
+    <input type="url" name="url" placeholder="https://www.youtube.com/watch?v=..." required autofocus>
+  </label>
+  <label>
+    <input type="checkbox" name="mpd" checked> Queue in MPD
+  </label>
+  <label>
+    <input type="checkbox" name="autoplay"> Auto-play now
+  </label>
+  <label>
+    <input type="checkbox" name="video"> Download video too (mkv)
+  </label>
+  <button type="submit">Download</button>
+</form>
+
+<p>Target directory: <span class="mono">{{.DownloadDir}}/{{.Subdir}}</span></p>
+
+<section id="jobs-section">
+  <h2>Jobs</h2>
+  <table id="jobs-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>URL</th>
+        <th>Options</th>
+        <th>Status</th>
+        <th>Files</th>
+        <th>Log</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</section>
+{{end}}
