@@ -126,6 +126,9 @@ func applyDefaults(cfg *Config) {
 	if cfg.Global.WebUI.DownloadDir == "" {
 		cfg.Global.WebUI.DownloadDir = cfg.Global.YtDLP.DownloadDir
 	}
+	if cfg.Global.WebUI.HistoryPath == "" {
+		cfg.Global.WebUI.HistoryPath = filepath.Join(cfg.Global.WebUI.DownloadDir, "history.jsonl")
+	}
 	for i := range cfg.Jobs {
 		if cfg.Jobs[i].DateFormat == "" {
 			cfg.Jobs[i].DateFormat = DefaultDateFormat

@@ -34,6 +34,7 @@ type History struct {
 // OpenHistory opens or creates a history log at the given directory.
 // The file is named history.jsonl and lives inside dir.
 func OpenHistory(dir string) *History {
+	_ = os.MkdirAll(dir, 0755)
 	return &History{path: filepath.Join(dir, "history.jsonl")}
 }
 

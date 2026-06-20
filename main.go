@@ -94,18 +94,12 @@ func main() {
 
 	var srv *webui.Server
 	if cfg.Global.WebUI.Enabled {
-		absConfigPath, err := filepath.Abs(*configPath)
-		if err != nil {
-			log.Fatalf("resolve config path: %v", err)
-		}
-		historyDir := filepath.Dir(absConfigPath)
-
 		webTimeout, err := time.ParseDuration(cfg.Global.WebUI.Timeout)
 		if err != nil {
 			log.Fatalf("invalid web_ui.timeout %q: %v", cfg.Global.WebUI.Timeout, err)
 		}
 
-		history := webui.OpenHistory(historyDir)
+		history := webui.OpenHistory(filepath.Dir(cfg.Global.WebUI.HistoryPath))
 		svc := webui.NewService(cfg, logger, history)
 		if webTimeout > 0 {
 			svc.SetTimeout(webTimeout)
