@@ -167,17 +167,18 @@ func (s *Service) runJob(parentCtx context.Context, job *Job) {
 
 	lock := s.lockForURL(job.URL)
 	lock.Lock()
-	files, err := s.download(jobCtx, job)
+	result, err := s.download(jobCtx, job)
 	lock.Unlock()
 	if err != nil {
 		s.setFailed(job, err.Error())
 		return
 	}
 
-	job.Files = files
+	job.PendingFiles = nil
+	job.Files = result.Files
 
-	if job.MPD && s.cfg.Global.MPD.Enabled && len(files) > 0 {
-		if err := player.EnqueueMPD(jobCtx, s.cfg.Global.MPD, s.cfg.Global.WebUI.DownloadDir, files, job.AutoPlay); err != nil {
+	if job.MPD && s.cfg.Global.MPD.Enabled && len(result.Files) > 0 {
+		if err := player.EnqueueMPD(jobCtx, s.cfg.Global.MPD, s.cfg.Global.WebUI.DownloadDir, result.Files, job.AutoPlay); err != nil {
 			s.logger.Printf("webui job %s: enqueue to MPD failed: %v", job.ID, err)
 			job.Log.WriteString(fmt.Sprintf("\nMPD enqueue error: %v\n", err))
 		}
@@ -195,7 +196,7 @@ func (s *Service) lockForURL(url string) *sync.Mutex {
 	return s.urlLocks[url]
 }
 
-func (s *Service) download(ctx context.Context, job *Job) ([]string, error) {
+func (s *Service) download(ctx context.Context, job *Job) (ytdlp.DownloadMediaResult, error) {
 	archivePath := ""
 	if s.cfg.Global.WebUI.DownloadDir != "" {
 		archivePath = s.cfg.Global.WebUI.DownloadDir + "/archive.txt"
@@ -210,7 +211,11 @@ func (s *Service) download(ctx context.Context, job *Job) ([]string, error) {
 		LogWriter:   job.Log,
 	}
 
-	return s.ytdlp.DownloadMedia(ctx, req)
+	result, err := s.ytdlp.DownloadMedia(ctx, req)
+	if err == nil {
+		job.PendingFiles = result.Pending
+	}
+	return result, err
 }
 
 func (s *Service) setStatus(job *Job, status string) {

@@ -107,15 +107,23 @@ type DownloadMediaRequest struct {
 	LogWriter   io.Writer
 }
 
+// DownloadMediaResult holds planned and completed file paths.
+type DownloadMediaResult struct {
+	Pending []string
+	Files   []string
+}
+
 // DownloadMedia downloads an arbitrary YouTube URL (video, playlist, or channel).
-// It returns the absolute paths of all completed files.
-func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) ([]string, error) {
+// It returns the planned file paths (from --print filename) and completed file
+// paths (from --print after_move:filepath).
+func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) (DownloadMediaResult, error) {
+	var result DownloadMediaResult
 	if req.DownloadDir == "" {
-		return nil, errors.New("download_dir not configured")
+		return result, errors.New("download_dir not configured")
 	}
 
 	if err := os.MkdirAll(req.DownloadDir, 0755); err != nil {
-		return nil, fmt.Errorf("create download directory: %w", err)
+		return result, fmt.Errorf("create download directory: %w", err)
 	}
 
 	archivePath := req.ArchivePath
@@ -125,7 +133,7 @@ func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) ([]
 
 	cookiePath, cleanup, err := c.prepareCookies()
 	if err != nil {
-		return nil, fmt.Errorf("prepare cookies: %w", err)
+		return result, fmt.Errorf("prepare cookies: %w", err)
 	}
 	defer cleanup()
 
@@ -142,7 +150,8 @@ func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) ([]
 		"--output", outputTemplate,
 		"--newline",
 		"--progress",
-		"--print", "after_move:filepath",
+		"--print", "PENDING:%(filepath)s",
+		"--print", "DONE:%(after_move:filepath)s",
 	)
 	if req.Video {
 		args = append(args,
@@ -165,7 +174,7 @@ func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) ([]
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("pipe stdout (%s): %w", cmdLine, err)
+		return result, fmt.Errorf("pipe stdout (%s): %w", cmdLine, err)
 	}
 
 	var stderrBuf bytes.Buffer
@@ -176,10 +185,11 @@ func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) ([]
 	cmd.Stderr = io.MultiWriter(stderrWriters...)
 
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("start yt-dlp (%s): %w", cmdLine, err)
+		return result, fmt.Errorf("start yt-dlp (%s): %w", cmdLine, err)
 	}
 
-	var files []string
+	pending := make(map[string]struct{})
+	done := make(map[string]struct{})
 	scanner := bufio.NewScanner(stdout)
 	lineWriter := io.MultiWriter(os.Stdout)
 	if req.LogWriter != nil {
@@ -189,23 +199,39 @@ func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) ([]
 		line := scanner.Text()
 		fmt.Fprintln(lineWriter, line)
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, req.DownloadDir) {
-			files = append(files, trimmed)
+		if strings.HasPrefix(trimmed, "PENDING:") {
+			path := strings.TrimPrefix(trimmed, "PENDING:")
+			if path != "" {
+				pending[path] = struct{}{}
+			}
+		} else if strings.HasPrefix(trimmed, "DONE:") {
+			path := strings.TrimPrefix(trimmed, "DONE:")
+			if path != "" {
+				done[path] = struct{}{}
+				delete(pending, path)
+			}
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("scan yt-dlp output (%s): %w", cmdLine, err)
+		return result, fmt.Errorf("scan yt-dlp output (%s): %w", cmdLine, err)
 	}
 
 	if err := cmd.Wait(); err != nil {
 		if msg := strings.TrimSpace(stderrBuf.String()); msg != "" {
-			return files, fmt.Errorf("yt-dlp download (%s): %s: %w", cmdLine, msg, err)
+			return result, fmt.Errorf("yt-dlp download (%s): %s: %w", cmdLine, msg, err)
 		}
-		return files, fmt.Errorf("yt-dlp download (%s): %w", cmdLine, err)
+		return result, fmt.Errorf("yt-dlp download (%s): %w", cmdLine, err)
+	}
+
+	for path := range pending {
+		result.Pending = append(result.Pending, path)
+	}
+	for path := range done {
+		result.Files = append(result.Files, path)
 	}
 
 	c.logger.Printf("yt-dlp cmd: %v", cmdLine)
-	return files, nil
+	return result, nil
 }
 
 // CheckAuth verifies that yt-dlp can access Watch Later using the configured cookies.

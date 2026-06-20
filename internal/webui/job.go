@@ -19,18 +19,19 @@ const (
 
 // Job represents a single on-demand download request.
 type Job struct {
-	ID         string        `json:"id"`
-	URL        string        `json:"url"`
-	Video      bool          `json:"video"`
-	MPD        bool          `json:"mpd"`
-	AutoPlay   bool          `json:"auto_play"`
-	Status     string        `json:"status"`
-	Files      []string      `json:"files,omitempty"`
-	Error      string        `json:"error,omitempty"`
-	Log        *bytes.Buffer `json:"-"`
-	CreatedAt  time.Time     `json:"created_at"`
-	StartedAt  time.Time     `json:"started_at,omitempty"`
-	FinishedAt time.Time     `json:"finished_at,omitempty"`
+	ID          string        `json:"id"`
+	URL         string        `json:"url"`
+	Video       bool          `json:"video"`
+	MPD         bool          `json:"mpd"`
+	AutoPlay    bool          `json:"auto_play"`
+	Status      string        `json:"status"`
+	PendingFiles []string     `json:"pending_files,omitempty"`
+	Files       []string      `json:"files,omitempty"`
+	Error       string        `json:"error,omitempty"`
+	Log         *bytes.Buffer `json:"-"`
+	CreatedAt   time.Time     `json:"created_at"`
+	StartedAt   time.Time     `json:"started_at,omitempty"`
+	FinishedAt  time.Time     `json:"finished_at,omitempty"`
 }
 
 func newJob(url string, video, mpd, autoPlay bool) *Job {

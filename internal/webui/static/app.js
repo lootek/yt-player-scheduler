@@ -23,7 +23,7 @@ function renderJobs(jobs) {
     }
 
     tr.appendChild(cell(job.id, 'mono'));
-    tr.appendChild(cell(job.url));
+    tr.appendChild(linkCell(job.url, job.url));
 
     const opts = [];
     if (job.mpd) opts.push('MPD');
@@ -39,12 +39,7 @@ function renderJobs(jobs) {
     }
     tr.appendChild(statusCell);
 
-    const filesCell = document.createElement('td');
-    filesCell.className = 'mono';
-    if (job.files && job.files.length) {
-      filesCell.textContent = job.files.join(', ');
-    }
-    tr.appendChild(filesCell);
+    tr.appendChild(filesCell(job));
 
     const logCell = document.createElement('td');
     const link = document.createElement('a');
@@ -57,10 +52,33 @@ function renderJobs(jobs) {
   }
 }
 
+function filesCell(job) {
+  const td = document.createElement('td');
+  td.className = 'mono';
+  const paths = job.files && job.files.length ? job.files : (job.pending_files || []);
+  const label = job.files && job.files.length ? '' : 'pending: ';
+  if (paths.length) {
+    td.textContent = label + paths.join(', ');
+    td.title = paths.join('\n');
+  }
+  return td;
+}
+
 function cell(text, className) {
   const td = document.createElement('td');
   if (className) td.className = className;
   td.textContent = text;
+  return td;
+}
+
+function linkCell(text, href) {
+  const td = document.createElement('td');
+  const a = document.createElement('a');
+  a.href = href;
+  a.textContent = text;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  td.appendChild(a);
   return td;
 }
 
