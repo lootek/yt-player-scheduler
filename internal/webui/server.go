@@ -176,7 +176,7 @@ func (s *Server) handleLog(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
-	name := strings.TrimPrefix(r.URL.Path, "/static/")
+	name := "static/" + strings.TrimPrefix(r.URL.Path, "/static/")
 	data, err := staticFS.ReadFile(name)
 	if err != nil {
 		http.NotFound(w, r)
