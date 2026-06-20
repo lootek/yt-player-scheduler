@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates ffmpeg mpv pulseaudio-utils python3 curl nodejs npm apt-utils chromium && \
     curl -fsSL https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
     chmod +x /usr/local/bin/yt-dlp && \
+    yt-dlp --update-to nightly && \
     # Ensure node is discoverable by yt-dlp (some distros only provide nodejs).
     if [ -x /usr/bin/nodejs ] && [ ! -x /usr/bin/node ]; then ln -s /usr/bin/nodejs /usr/bin/node; fi && \
     rm -rf /var/lib/apt/lists/*
