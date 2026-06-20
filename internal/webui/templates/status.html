@@ -1,24 +1,44 @@
-{{define "content"}}
-<meta http-equiv="refresh" content="5">
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="5">
+  <title>yt-rpi-player — job status</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { text-align: left; padding: .4rem; border-bottom: 1px solid #ddd; }
+    .status-queued { color: #666; }
+    .status-running { color: #06c; }
+    .status-done { color: #080; }
+    .status-failed { color: #c00; }
+    .mono { font-family: ui-monospace, monospace; font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <h1>yt-rpi-player — job status</h1>
+  <p>
+    <a href="/">&larr; Back to form</a>
+  </p>
 
-<p>
-  <a href="/">&larr; Back to form</a>
-</p>
-
-<section id="jobs-section" data-highlight-id="{{.ID}}">
-  <h2>Job status</h2>
-  <table id="jobs-table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>URL</th>
-        <th>Options</th>
-        <th>Status</th>
-        <th>Files</th>
-        <th>Log</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</section>
-{{end}}
+  <section id="jobs-section" data-highlight-id="{{.ID}}">
+    <h2>Job status</h2>
+    <table id="jobs-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>URL</th>
+          <th>Options</th>
+          <th>Status</th>
+          <th>Files</th>
+          <th>Log</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
