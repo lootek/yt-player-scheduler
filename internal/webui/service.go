@@ -26,6 +26,10 @@ type Service struct {
 	order   []string
 	queue   chan *Job
 	timeout time.Duration
+	// urlLocks serialize downloads of the same URL so concurrent jobs do not
+	// race on the same output files and archive entries.
+	urlLocks   map[string]*sync.Mutex
+	urlLocksMu sync.Mutex
 }
 
 // NewService creates a new web UI service.
@@ -43,13 +47,14 @@ func NewServiceWithTimeout(cfg config.Config, logger *log.Logger, history *Histo
 		timeout = 2 * time.Hour
 	}
 	return &Service{
-		cfg:     cfg,
-		ytdlp:   ytdlp.New(cfg.Global.YtDLP, logger),
-		logger:  logger,
-		history: history,
-		jobs:    make(map[string]*Job),
-		queue:   make(chan *Job, cfg.Global.WebUI.MaxConcurrent*4),
-		timeout: timeout,
+		cfg:      cfg,
+		ytdlp:    ytdlp.New(cfg.Global.YtDLP, logger),
+		logger:   logger,
+		history:  history,
+		jobs:     make(map[string]*Job),
+		queue:    make(chan *Job, cfg.Global.WebUI.MaxConcurrent*4),
+		timeout:  timeout,
+		urlLocks: make(map[string]*sync.Mutex),
 	}
 }
 
@@ -160,21 +165,10 @@ func (s *Service) runJob(parentCtx context.Context, job *Job) {
 
 	s.setStatus(job, string(statusRunning))
 
-	archivePath := ""
-	if s.cfg.Global.WebUI.DownloadDir != "" {
-		archivePath = s.cfg.Global.WebUI.DownloadDir + "/archive.txt"
-	}
-
-	req := ytdlp.DownloadMediaRequest{
-		URL:         job.URL,
-		DownloadDir: s.cfg.Global.WebUI.DownloadDir,
-		Subdir:      s.cfg.Global.WebUI.Subdir,
-		ArchivePath: archivePath,
-		Video:       job.Video,
-		LogWriter:   job.Log,
-	}
-
-	files, err := s.ytdlp.DownloadMedia(jobCtx, req)
+	lock := s.lockForURL(job.URL)
+	lock.Lock()
+	files, err := s.download(jobCtx, job)
+	lock.Unlock()
 	if err != nil {
 		s.setFailed(job, err.Error())
 		return
@@ -190,6 +184,33 @@ func (s *Service) runJob(parentCtx context.Context, job *Job) {
 	}
 
 	s.setDone(job)
+}
+
+func (s *Service) lockForURL(url string) *sync.Mutex {
+	s.urlLocksMu.Lock()
+	defer s.urlLocksMu.Unlock()
+	if s.urlLocks[url] == nil {
+		s.urlLocks[url] = &sync.Mutex{}
+	}
+	return s.urlLocks[url]
+}
+
+func (s *Service) download(ctx context.Context, job *Job) ([]string, error) {
+	archivePath := ""
+	if s.cfg.Global.WebUI.DownloadDir != "" {
+		archivePath = s.cfg.Global.WebUI.DownloadDir + "/archive.txt"
+	}
+
+	req := ytdlp.DownloadMediaRequest{
+		URL:         job.URL,
+		DownloadDir: s.cfg.Global.WebUI.DownloadDir,
+		Subdir:      s.cfg.Global.WebUI.Subdir,
+		ArchivePath: archivePath,
+		Video:       job.Video,
+		LogWriter:   job.Log,
+	}
+
+	return s.ytdlp.DownloadMedia(ctx, req)
 }
 
 func (s *Service) setStatus(job *Job, status string) {
