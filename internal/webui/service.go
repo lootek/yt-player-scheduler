@@ -17,15 +17,15 @@ const defaultHistoryLimit = 200
 
 // Service manages the web UI download queue and in-memory job state.
 type Service struct {
-	cfg       config.Config
-	ytdlp     ytdlp.Client
-	logger    *log.Logger
-	history   *History
-	mu        sync.RWMutex
-	jobs      map[string]*Job
-	order     []string
-	queue     chan *Job
-	timeout   time.Duration
+	cfg     config.Config
+	ytdlp   ytdlp.Client
+	logger  *log.Logger
+	history *History
+	mu      sync.RWMutex
+	jobs    map[string]*Job
+	order   []string
+	queue   chan *Job
+	timeout time.Duration
 }
 
 // NewService creates a new web UI service.
@@ -200,12 +200,12 @@ func (s *Service) setStatus(job *Job, status string) {
 	case string(statusRunning):
 		job.StartedAt = time.Now().UTC()
 		_ = s.history.Append(HistoryEvent{
-			ID:        job.ID,
-			Kind:      "start",
-			URL:       job.URL,
-			Video:     job.Video,
-			MPD:       job.MPD,
-			AutoPlay:  job.AutoPlay,
+			ID:       job.ID,
+			Kind:     "start",
+			URL:      job.URL,
+			Video:    job.Video,
+			MPD:      job.MPD,
+			AutoPlay: job.AutoPlay,
 		})
 	}
 }
