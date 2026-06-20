@@ -150,8 +150,8 @@ func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) (Do
 		"--output", outputTemplate,
 		"--newline",
 		"--progress",
-		"--print", "PENDING:%(filepath)s",
-		"--print", "DONE:%(after_move:filepath)s",
+		"--print", "before_download:PENDING:%(filepath)s",
+		"--print", "after_move:DONE:%(filepath)s",
 	)
 	if req.Video {
 		args = append(args,
