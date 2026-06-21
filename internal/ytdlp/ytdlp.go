@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/lootek/yt-rpi-player/internal/config"
 )
@@ -105,6 +106,8 @@ type DownloadMediaRequest struct {
 	ArchivePath string
 	Video       bool
 	LogWriter   io.Writer
+	OnPending   func(path string)
+	OnDone      func(path string)
 }
 
 // DownloadMediaResult holds planned and completed file paths.
@@ -113,9 +116,48 @@ type DownloadMediaResult struct {
 	Files   []string
 }
 
+// syncWriter serializes writes to an underlying writer so multiple yt-dlp
+// output streams can share the same log buffer safely.
+type syncWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func (w *syncWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.w.Write(p)
+}
+
+// lineParser buffers incoming bytes, emits complete lines to an underlying
+// writer, and invokes a callback for each line. It is used to parse yt-dlp's
+// stderr without spawning an extra reader goroutine.
+type lineParser struct {
+	mu     sync.Mutex
+	w      io.Writer
+	buf    bytes.Buffer
+	onLine func(string)
+}
+
+func (p *lineParser) Write(data []byte) (int, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	n, _ := p.buf.Write(data)
+	for {
+		line, err := p.buf.ReadString('\n')
+		if err == io.EOF {
+			p.buf.Write([]byte(line))
+			return n, nil
+		}
+		p.w.Write([]byte(line))
+		p.onLine(strings.TrimSuffix(line, "\n"))
+	}
+}
+
 // DownloadMedia downloads an arbitrary YouTube URL (video, playlist, or channel).
-// It returns the planned file paths (from --print filename) and completed file
-// paths (from --print after_move:filepath).
+// It reports planned file paths as soon as yt-dlp emits a destination line
+// (e.g. "[download] Destination: ...") on stderr and completed paths from
+// --print after_move:filepath on stdout.
 func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) (DownloadMediaResult, error) {
 	var result DownloadMediaResult
 	if req.DownloadDir == "" {
@@ -150,7 +192,7 @@ func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) (Do
 		"--output", outputTemplate,
 		"--newline",
 		"--progress",
-		"--print", "before_download:PENDING:%(filepath)s",
+		"--print", "before_download:PENDING:%(filename)s",
 		"--print", "after_move:DONE:%(filepath)s",
 	)
 	if req.Video {
@@ -177,39 +219,75 @@ func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) (Do
 		return result, fmt.Errorf("pipe stdout (%s): %w", cmdLine, err)
 	}
 
+	var logWriter io.Writer
+	if req.LogWriter != nil {
+		logWriter = &syncWriter{w: req.LogWriter}
+	}
+
+	pendingBases := make(map[string]string)
+	done := make(map[string]struct{})
+	var mu sync.Mutex
+
+	addPending := func(path string) {
+		if path == "" {
+			return
+		}
+		mu.Lock()
+		ext := filepath.Ext(path)
+		base := strings.TrimSuffix(path, ext)
+		pendingBases[base] = path
+		if req.OnPending != nil {
+			req.OnPending(path)
+		}
+		mu.Unlock()
+	}
+	addDone := func(path string) {
+		if path == "" {
+			return
+		}
+		mu.Lock()
+		done[path] = struct{}{}
+		ext := filepath.Ext(path)
+		base := strings.TrimSuffix(path, ext)
+		delete(pendingBases, base)
+		if req.OnDone != nil {
+			req.OnDone(path)
+		}
+		mu.Unlock()
+	}
+
 	var stderrBuf bytes.Buffer
 	stderrWriters := []io.Writer{os.Stderr, &stderrBuf}
-	if req.LogWriter != nil {
-		stderrWriters = append(stderrWriters, req.LogWriter)
+	if logWriter != nil {
+		stderrWriters = append(stderrWriters, logWriter)
 	}
-	cmd.Stderr = io.MultiWriter(stderrWriters...)
+	cmd.Stderr = &lineParser{
+		w: io.MultiWriter(stderrWriters...),
+		onLine: func(line string) {
+			if idx := strings.Index(line, "] Destination: "); idx >= 0 {
+				addPending(line[idx+len("] Destination: "):])
+			}
+		},
+	}
 
 	if err := cmd.Start(); err != nil {
 		return result, fmt.Errorf("start yt-dlp (%s): %w", cmdLine, err)
 	}
 
-	pending := make(map[string]struct{})
-	done := make(map[string]struct{})
-	scanner := bufio.NewScanner(stdout)
-	lineWriter := io.MultiWriter(os.Stdout)
-	if req.LogWriter != nil {
-		lineWriter = io.MultiWriter(os.Stdout, req.LogWriter)
+	stdoutWriters := []io.Writer{os.Stdout}
+	if logWriter != nil {
+		stdoutWriters = append(stdoutWriters, logWriter)
 	}
+	lineWriter := io.MultiWriter(stdoutWriters...)
+	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		line := scanner.Text()
 		fmt.Fprintln(lineWriter, line)
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "PENDING:") {
-			path := strings.TrimPrefix(trimmed, "PENDING:")
-			if path != "" {
-				pending[path] = struct{}{}
-			}
+		if strings.HasPrefix(trimmed, "before_download:PENDING:") {
+			addPending(strings.TrimPrefix(trimmed, "before_download:PENDING:"))
 		} else if strings.HasPrefix(trimmed, "DONE:") {
-			path := strings.TrimPrefix(trimmed, "DONE:")
-			if path != "" {
-				done[path] = struct{}{}
-				delete(pending, path)
-			}
+			addDone(strings.TrimPrefix(trimmed, "DONE:"))
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -223,7 +301,7 @@ func (c Client) DownloadMedia(ctx context.Context, req DownloadMediaRequest) (Do
 		return result, fmt.Errorf("yt-dlp download (%s): %w", cmdLine, err)
 	}
 
-	for path := range pending {
+	for _, path := range pendingBases {
 		result.Pending = append(result.Pending, path)
 	}
 	for path := range done {

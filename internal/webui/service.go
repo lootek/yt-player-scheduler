@@ -5,6 +5,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -174,8 +177,10 @@ func (s *Service) runJob(parentCtx context.Context, job *Job) {
 		return
 	}
 
+	s.mu.Lock()
 	job.PendingFiles = nil
 	job.Files = result.Files
+	s.mu.Unlock()
 
 	if job.MPD && s.cfg.Global.MPD.Enabled && len(result.Files) > 0 {
 		if err := player.EnqueueMPD(jobCtx, s.cfg.Global.MPD, s.cfg.Global.WebUI.DownloadDir, result.Files, job.AutoPlay); err != nil {
@@ -196,6 +201,30 @@ func (s *Service) lockForURL(url string) *sync.Mutex {
 	return s.urlLocks[url]
 }
 
+func sameFileBase(a, b string) bool {
+	ea := filepath.Ext(a)
+	eb := filepath.Ext(b)
+	return strings.TrimSuffix(a, ea) == strings.TrimSuffix(b, eb)
+}
+
+func (s *Service) addPending(job *Job, path string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job.PendingFiles = slices.DeleteFunc(job.PendingFiles, func(p string) bool {
+		return sameFileBase(p, path)
+	})
+	job.PendingFiles = append(job.PendingFiles, path)
+}
+
+func (s *Service) addFile(job *Job, path string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job.PendingFiles = slices.DeleteFunc(job.PendingFiles, func(p string) bool {
+		return sameFileBase(p, path)
+	})
+	job.Files = append(job.Files, path)
+}
+
 func (s *Service) download(ctx context.Context, job *Job) (ytdlp.DownloadMediaResult, error) {
 	archivePath := ""
 	if s.cfg.Global.WebUI.DownloadDir != "" {
@@ -209,13 +238,11 @@ func (s *Service) download(ctx context.Context, job *Job) (ytdlp.DownloadMediaRe
 		ArchivePath: archivePath,
 		Video:       job.Video,
 		LogWriter:   job.Log,
+		OnPending:   func(path string) { s.addPending(job, path) },
+		OnDone:      func(path string) { s.addFile(job, path) },
 	}
 
-	result, err := s.ytdlp.DownloadMedia(ctx, req)
-	if err == nil {
-		job.PendingFiles = result.Pending
-	}
-	return result, err
+	return s.ytdlp.DownloadMedia(ctx, req)
 }
 
 func (s *Service) setStatus(job *Job, status string) {
@@ -274,6 +301,7 @@ func (s *Service) setFailed(job *Job, errStr string) {
 func (s *Service) clone(job *Job) *Job {
 	cpy := *job
 	cpy.Log = bytes.NewBuffer(job.Log.Bytes())
+	cpy.PendingFiles = append([]string(nil), job.PendingFiles...)
 	cpy.Files = append([]string(nil), job.Files...)
 	return &cpy
 }
