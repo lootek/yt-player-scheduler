@@ -4,13 +4,13 @@ A small Go scheduler that searches YouTube daily feeds by keyword + date and pla
 
 ## Features
 - Cron-like scheduling (via robfig/cron) configured in YAML
-- yt-dlp based search using `ytsearchdate` (keywords + current date)
+- yt-dlp based search using `ytsearch` (keywords + current date)
 - Streams audio only (default player: `ffplay` to PulseAudio)
 - **MPD support**: can add streams directly to a local Music Player Daemon playlist
 - Optional `-run-now` flag to run all jobs once on startup
 
 ## What is yt-dlp?
-[`yt-dlp`](https://github.com/yt-dlp/yt-dlp) is a maintained fork of `youtube-dl` used to search YouTube (`ytsearchdate`), resolve media URLs, and stream audio without a browser.
+[`yt-dlp`](https://github.com/yt-dlp/yt-dlp) is a maintained fork of `youtube-dl` used to search YouTube (`ytsearch`), resolve media URLs, and stream audio without a browser.
 
 ## Configuration
 Create a `config.yaml` based on `config.example.yaml`:

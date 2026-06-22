@@ -365,7 +365,8 @@ func (c Client) Search(ctx context.Context, query string, limit int) ([]VideoEnt
 	}
 	defer cleanup()
 
-	searchSpec := fmt.Sprintf("ytsearchdate%d:%s", limit, query)
+	// ytsearchdate was removed by yt-dlp in 2026.02; use plain ytsearch.
+	searchSpec := fmt.Sprintf("ytsearch%d:%s", limit, query)
 	args := append(c.baseArgs(),
 		"--flat-playlist",
 		"--dump-json",

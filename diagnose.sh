@@ -17,10 +17,20 @@ fi
 echo
 
 echo "2. Checking Node.js installation..."
+NODE_CMD=""
 if command -v node &> /dev/null; then
-    echo "✓ node found: $(node --version)"
+    NODE_CMD="node"
 elif command -v nodejs &> /dev/null; then
-    echo "✓ nodejs found: $(nodejs --version)"
+    NODE_CMD="nodejs"
+fi
+if [ -n "$NODE_CMD" ]; then
+    NODE_VERSION="$($NODE_CMD --version)"
+    echo "✓ $NODE_CMD found: $NODE_VERSION"
+    NODE_MAJOR="${NODE_VERSION#v}"
+    NODE_MAJOR="${NODE_MAJOR%%.*}"
+    if [ "$NODE_MAJOR" -lt 22 ]; then
+        echo "⚠ Node.js $NODE_VERSION is installed, but yt-dlp requires Node >= 22 for EJS"
+    fi
 else
     echo "✗ Node.js not found (required for signature extraction)"
 fi
@@ -44,7 +54,7 @@ fi
 echo
 
 echo "5. Testing basic yt-dlp search..."
-yt-dlp --flat-playlist --dump-json --no-warnings --ignore-errors --limit 1 "ytsearchdate1:music" 2>&1 | head -5
+yt-dlp --flat-playlist --dump-json --no-warnings --ignore-errors --limit 1 "ytsearch1:music" 2>&1 | head -5
 echo
 
 echo "6. Testing stream extraction (default)..."
