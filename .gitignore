@@ -31,7 +31,11 @@ go.work.sum
 # .idea/
 # .vscode/
 
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Local config & secrets (never commit real cookies/tokens)
 config.yaml
-cookies.txt
 cookies.txt
 .claude/settings.local.json
