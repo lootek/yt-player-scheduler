@@ -136,3 +136,13 @@ A durable `history.jsonl` is kept next to `config.yaml`. The status page auto-re
 - `-config path`: path to YAML config (default `config.yaml`).
 - `-run-now`: execute all jobs once immediately after startup before scheduling.
 - `-web-ui`: start the web UI server alongside the scheduler.
+
+## Disclaimer
+
+This is a personal hobby project provided as-is under the MIT License, with no warranty.
+
+It is a thin wrapper around [`yt-dlp`](https://github.com/yt-dlp/yt-dlp). You are responsible for how you use it:
+
+- Use it only for content you are entitled to access, and respect YouTube's Terms of Service and the copyright laws in your jurisdiction.
+- The optional cookies feature is intended for authenticating with **your own** account (e.g. to use an existing YouTube Premium subscription for ad-free playback). Never commit your `cookies.txt` or share credentials.
+- This project is not affiliated with, endorsed by, or sponsored by YouTube or Google.
