@@ -20,13 +20,13 @@ yt-dlp --cookies-from-browser firefox --cookies cookies.txt --skip-download http
 
 ### 2. Deploy to Pi
 ```bash
-scp cookies.txt pi@192.168.10.22:~/yt-daily-player/
-ssh pi@192.168.10.22 'cd ~/yt-daily-player && docker compose restart'
+scp cookies.txt ${RPI_USER}@${RPI_IP}:~/yt-daily-player/
+ssh ${RPI_USER}@${RPI_IP} 'cd ~/yt-daily-player && docker compose restart'
 ```
 
 ### 3. Test
 ```bash
-ssh pi@192.168.10.22
+ssh ${RPI_USER}@${RPI_IP}
 docker compose run --rm yt-rpi-player sh -c \
   'yt-dlp --cookies /app/cookies.txt -F VIDEO_URL | head -20'
 ```
@@ -34,7 +34,7 @@ docker compose run --rm yt-rpi-player sh -c \
 ## Troubleshooting
 ```bash
 # Verify file exists
-ssh pi@192.168.10.22 "ls -la ~/yt-daily-player/cookies.txt"
+ssh ${RPI_USER}@${RPI_IP} "ls -la ~/yt-daily-player/cookies.txt"
 
 # Check mounted in container
 docker compose exec yt-rpi-player ls -la /app/cookies.txt

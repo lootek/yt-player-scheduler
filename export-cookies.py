@@ -91,8 +91,8 @@ def export_youtube_cookies(output_file='cookies.txt'):
 
         print(f"✅ Exported {len(cookies)} cookies to {output_file}")
         print(f"\nNext steps:")
-        print(f"1. Copy cookies.txt to Raspberry Pi: scp {output_file} pi@192.168.10.22:~/yt-daily-player/")
-        print(f"2. Restart container: ssh pi@192.168.10.22 'cd ~/yt-daily-player && docker compose restart'")
+        print(f"1. Copy cookies.txt to Raspberry Pi: scp {output_file} ${{RPI_USER}}@${{RPI_IP}}:~/yt-daily-player/")
+        print(f"2. Restart container: ssh ${{RPI_USER}}@${{RPI_IP}} 'cd ~/yt-daily-player && docker compose restart'")
         return True
 
     except Exception as e:

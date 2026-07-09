@@ -218,8 +218,8 @@ def main():
     if success:
         print(f"\n✅ Success! Cookies saved to: {output}")
         print(f"\nNext steps:")
-        print(f"  1. Copy to Pi: scp {output} pi@192.168.10.22:~/yt-daily-player/")
-        print(f"  2. Restart: ssh pi@192.168.10.22 'cd ~/yt-daily-player && docker compose restart'")
+        print(f"  1. Copy to Pi: scp {output} ${{RPI_USER}}@${{RPI_IP}}:~/yt-daily-player/")
+        print(f"  2. Restart: ssh ${{RPI_USER}}@${{RPI_IP}} 'cd ~/yt-daily-player && docker compose restart'")
         print(f"\n🎉 Your streams will now be ad-free!")
         return 0
 
