@@ -34,6 +34,8 @@ var resumeState = struct {
 	watchWG sync.WaitGroup
 }{}
 
+var debugMPDStatus = false
+
 type watcher struct {
 	cfg      config.MPDConfig
 	expected int // songid the watcher is currently tracking as "the playing item"
@@ -356,7 +358,9 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 			// If MPD is not playing anything, or playing a different ID, we assume we're done.
 			// Note: status["songid"] is the ID of the current song.
 			if status["state"] != "play" || status["songid"] != fmt.Sprintf("%d", id) {
-				log.Printf("mpd status: %#v", status)
+				if debugMPDStatus {
+					log.Printf("mpd status: %#v", status)
+				}
 				// Resume of the prior item is handled by the background watcher
 				// (started above) which survives after this function returns.
 				return nil
