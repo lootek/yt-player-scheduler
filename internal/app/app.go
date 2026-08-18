@@ -70,7 +70,13 @@ func (a *App) RunJob(ctx context.Context, job config.JobConfig) error {
 		if err := player.PlayWithMPD(ctx, a.cfg.Global.MPD, a.cfg.Global.YtDLP.DownloadDir, playURL); err != nil {
 			return fmt.Errorf("play audio via MPD: %w", err)
 		}
-	} else if a.cfg.Global.Player.Command == "mpv" {
+		// PlayWithMPD only confirms playback started, then hands off to MPD
+		// which plays the item to completion independently of this job.
+		a.logger.Printf("[job:%s] playback started on MPD (continues independently)", jobName)
+		return nil
+	}
+
+	if a.cfg.Global.Player.Command == "mpv" {
 		// If DownloadDir is used, play the local file. Otherwise, use mpv internal yt-dlp integration.
 		if a.cfg.Global.YtDLP.DownloadDir != "" {
 			if err := player.Play(ctx, a.cfg.Global.Player, playURL); err != nil {
