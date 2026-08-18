@@ -39,7 +39,13 @@ global:
     # This helps avoid HTTP 403 Forbidden errors when MPD tries to decode streams directly.
     # Cron jobs use this directory; the web UI has its own download_dir below.
     download_dir: /app/downloads
-    extra_args: []
+    # yt-dlp's default player client (android_vr) gets HTTP Error 403 on media
+    # download for many videos (observed Aug 2026 with nightly 2026.06.21).
+    # Force the mweb client, which works reliably without cookies/PO tokens.
+    # Re-evaluate if a future yt-dlp/YouTube change breaks mweb.
+    extra_args:
+      - --extractor-args
+      - youtube:player_client=mweb
   # Optional: on-demand web UI for downloading videos/playlists.
   web_ui:
     enabled: false
