@@ -340,24 +340,29 @@ func PlayWithMPD(ctx context.Context, cfg config.MPDConfig, downloadDir string, 
 		return fmt.Errorf("mpd playid failed on %v: %w", id, err)
 	}
 
-	// Monitor playback status until it finishes or context is cancelled.
-	// This maintains consistency with other player implementations that block.
-	ticker := time.NewTicker(5 * time.Second)
+	// Confirm the added item has actually started playing, then return. MPD
+	// plays the file to completion on its own; the background resume watcher
+	// (started above) restores any prior item once this one ends, so there is no
+	// need to block here for the whole track. Returning once playback is
+	// confirmed lets a short player.timeout bound search+download+start without
+	// producing a misleading "context deadline exceeded" for items longer than
+	// the timeout.
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("mpd: added item did not start playing within job deadline: %w", ctx.Err())
 		case <-ticker.C:
 			status, err := client.Status()
 			if err != nil {
 				return fmt.Errorf("mpd status failed: %w", err)
 			}
 
-			// If MPD is not playing anything, or playing a different ID, we assume we're done.
+			// Our item is now the current playing song: hand off to MPD.
 			// Note: status["songid"] is the ID of the current song.
-			if status["state"] != "play" || status["songid"] != fmt.Sprintf("%d", id) {
+			if status["state"] == "play" && status["songid"] == fmt.Sprintf("%d", id) {
 				if debugMPDStatus {
 					log.Printf("mpd status: %#v", status)
 				}

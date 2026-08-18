@@ -15,7 +15,7 @@ global:
       PULSE_SERVER: "tcp:localhost:4713"
       # Force SDL to use PulseAudio driver
       SDL_AUDIODRIVER: "pulse"
-    timeout: 20m
+    timeout: 5m
   # Use a local MPD server instead of a player command.
   # If enabled: it ignores 'player' section.
   mpd:
