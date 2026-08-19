@@ -17,7 +17,7 @@ design taste but in how much each model actually went and checked.
 ## Results
 
 **[View the comparison table](https://lootek.github.io/yt-player-scheduler/ai-plans/model-comparison.html)**
-— 25 runs x 13 categories, toggle models, hover any cell for the original finding.
+— 25 runs x 17 categories, toggle models, hover any cell for the original finding.
 
 Served via Pages because GitHub renders raw HTML in-repo as plain text. Works offline too: clone
 and open `model-comparison.html`, it has no dependencies.
@@ -56,9 +56,13 @@ isn't blind - I wrote the task. Runs span weeks, different machines, and a sligh
 between batches. `muse-glimmer` is absent: it never parsed the prompt in this harness, so there was
 nothing to score.
 
-Two things worth knowing about the numbers. The 13 categories are not 13 independent dimensions -
-they correlate strongly (first principal component ~53% of variance, alpha 0.92), so read the table
-as one axis, roughly "did the model go and check the running system", measured several ways. And the
+Two things worth knowing about the numbers. The first 13 categories are not 13 independent
+dimensions - they correlate strongly (first principal component ~53% of variance, alpha 0.92), so
+read them as one axis, roughly "did the model go and check the running system", measured several
+ways. That's also why I added four more, hand-scored from a full read of every plan: the original
+set had no home for a verified-facts block or a commit plan, which is how `opus-4-8` ended up
+ranked below `opus-4-7`. Input/command safety turned out to be the most independent axis in the
+table - `glm-5.3` scores 4 on it, both Opus plans score 0. And the
 ratings are keyword-mapped from prose cells, which is inspectable but brittle: I've found and fixed
 18 scoring bugs so far, every one of them a negation or an incidental substring - at one point three
 plans that explicitly broke the deployment were showing full marks for deployment. Assume more

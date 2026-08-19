@@ -23,6 +23,10 @@ WEIGHTS = {
     "Cron path left intact": 2.0, "Async / concurrency": 2.0, "Persistence": 2.0,
     "Automated tests": 2.0, "Avoided ports: mapping": 1.5, "Crash resilience": 1.5,
     "Checkbox model": 1.0, "Video container": 1.0, "Audio format": 0.5, "Auth": 0.5,
+    # new axes: discovery + execution matter to this brief; boot-guard is a real shipped bug;
+    # safety is the most independent axis in the matrix
+    "Discovery facts stated": 2.0, "Execution plan": 2.0,
+    "Boot-guard awareness": 1.5, "Input/command safety": 1.5,
 }
 
 # Models retired from Ollama Cloud (waves 2026-07-15 / 07-31) - can't be re-run/demoed.
@@ -32,6 +36,22 @@ HANDICAPPED = {"fable-5 v1"}   # original: Bash-tool outage blocked git show/ssh
 # Same model + same prompt, run twice under different tool availability. Kept as a PAIR
 # on purpose: it shows how much of a "model result" is really an environment result.
 PAIRED = {"fable-5 v1", "fable-5 v2"}
+
+# Four axes added 2026-08-19 to cover strengths the original 13 missed (notably opus-4-8's
+# verified-facts block and its commit/subagent plan). These are HAND-SCORED from a full read of
+# all 25 plans - not keyword-derived - so they carry an evidence phrase instead of a prose cell.
+NEW_CATS = [
+    ("Discovery facts stated", "discovery_facts", "discovery_evidence"),
+    ("Execution plan",         "execution_plan",  "execution_evidence"),
+    ("Boot-guard awareness",   "boot_guard",      "boot_evidence"),
+    ("Input/command safety",   "input_safety",    "safety_evidence"),
+]
+NEW_SCORES = {}
+_np = os.path.join(HERE, "new-categories-scores.csv")
+if os.path.exists(_np):
+    with open(_np) as _f:
+        for _r in csv.DictReader(_f):
+            NEW_SCORES[_r["plan"]] = _r
 
 L = lambda s: s.lower()
 NEG = r"(no|not|never|without)\s+"   # negation prefix used by the corrected scorers
@@ -209,6 +229,13 @@ for r in rows[1:]:
         raw = r[HDR_IDX[col]]
         score, short = fn(raw)
         cells[label] = {"s": score, "t": short, "raw": raw}
+    for _label, _sc, _ev in NEW_CATS:
+        _row = NEW_SCORES.get(plan)
+        if _row:
+            cells[_label] = {"s": int(_row[_sc]), "t": _row[_ev][:34],
+                             "raw": _row[_ev] + "  [hand-scored from a full plan read]"}
+        else:
+            cells[_label] = {"s": 0, "t": "not scored", "raw": "no data"}
     models.append({
         "plan": plan, "rank": int(r[0]), "tier": r[2],
         "quality": q, "out": out_tok, "total": total_tok,
@@ -245,7 +272,7 @@ EFF_PICKS = {"minimax-m3", "glm-5.2-cloud", "qwen3.5-397b", "fable-5 v1"}
 DEFAULT_ON = {m["plan"] for m in models[:6]} | EFF_PICKS
 
 payload = {
-    "cats": [c[0] for c in CATS],
+    "cats": [c[0] for c in CATS] + [c[0] for c in NEW_CATS],
     "models": models,
     "defaultOn": sorted(DEFAULT_ON),
 }
@@ -335,8 +362,8 @@ TPL = """<!DOCTYPE html>
 <body>
 <div class="wrap viz-root">
   <h1>Model bake-off — one identical planning task</h1>
-  <p class="sub">__NMODELS__ models, same prompt: extend the Go <code>yt-player-scheduler</code> with a download web UI.
-     Each category rated 0–4 from the source analysis; hover any cell for the original finding.</p>
+  <p class="sub">__NMODELS__ runs, same prompt: extend the Go <code>yt-player-scheduler</code> with a download web UI.
+     Each category rated 0–4; hover any cell for the original finding.</p>
 
   <div class="controls">
     <h2>Models — click to show / hide</h2>
@@ -366,6 +393,12 @@ TPL = """<!DOCTYPE html>
     which is what a $20 budget actually buys.
     <br><b>⚠ retired</b> = model has since been retired from Ollama Cloud (waves 2026-07-15 / 07-31):
     its result stands as history but it can't be re-run or demoed live.
+    <br><b>The last four rows are hand-scored</b> from a full read of all 25 plans, not keyword-derived
+    like the first 13. They were added because the original 13 correlated heavily (one latent
+    "did it go and check" factor) and missed real strengths — <code>opus-4-8</code> ranked below
+    <code>opus-4-7</code> purely because its verified-facts block and commit/subagent plan had nowhere to
+    score. <b>Input/command safety is the most independent axis in the table</b> (mean |r| = 0.34
+    against the other 13): <code>glm-5.3</code> scores 4 on it, both Opus plans score 0.
     <br><b>⛒ / ⇄ fable-5 v1 and v2 are the same model on the same prompt, kept deliberately.</b>
     v1 (⛒) hit a Bash-tool outage that blocked <code>git show</code> and ssh, so it
     reconstructed the target commit from the reflog and scored 2/4 on grounding. v2 (⇄)
