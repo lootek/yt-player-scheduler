@@ -62,13 +62,15 @@ read them as one axis, roughly "did the model go and check the running system", 
 ways. That's also why I added four more, hand-scored from a full read of every plan: the original
 set had no home for a verified-facts block or a commit plan, which is how `opus-4-8` ended up
 ranked below `opus-4-7`. Input/command safety turned out to be the most independent axis in the
-table - `glm-5.3` scores 4 on it, both Opus plans score 0. And the
-ratings are keyword-mapped from prose cells, which is inspectable but brittle: I've found and fixed
+table - `glm-5.3` scores 4 on it, both Opus plans score 0.
+
+The first 13 ratings are keyword-mapped from prose cells, which is inspectable but brittle: I've found and fixed
 18 scoring bugs so far, every one of them a negation or an incidental substring - at one point three
 plans that explicitly broke the deployment were showing full marks for deployment. Assume more
 remain.
 
-The top two tie on the rubric (51/52 each), so #1 vs #2 is my judgement, not a measurement.
+opus-5 leads on the full 17 (65/68 to sonnet-5's 62), but on the original 13 they tied - so treat
+the gap at the very top as thin.
 
 For a rigorous take on this kind of evaluation (repeat trials, median + pass@k, a fixed judge
 stronger than every entrant, pinned containers), see
