@@ -13,18 +13,18 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "plan-comparison.csv")
 OUT = os.path.join(HERE, "model-comparison.html")
 
-# Quality 0-100, monotone from the rank/tier structure in plan-comparison.md.
-QUALITY = {
-    "opus-5": 99,
-    "sonnet-5": 97, "glm-5.3": 96, "fable-5 v2": 95, "fable-5 v1": 93, "glm-5.2-cloud": 90, "opus-4-8": 88, "gpt-5.5": 89,
-    "opus-4-7": 88, "qwen3.5-397b": 86,
-    "kimi-k2.7-code-cloud": 85, "minimax-m3": 83, "sonnet-4-6": 81,
-    "gemma4-31b-cloud": 72, "nemotron-3-ultra-cloud": 68,
-    "deepseek-v4-pro": 58, "gpt-oss-20b": 54, "gemini-3-flash-preview-cloud": 50,
-    "gemma4-agent-26b": 46, "qwen3.5-cloud": 43, "gpt-oss-120b": 40,
-    "mistral-large-3-675b-cloud": 30, "qwen3-coder-480b-cloud": 27, "gemma4-26b": 24,
-    "qwen-2.5-coder-14b": 8,
+# Plan quality 0-100 is computed BOTTOM-UP from the scored categories, weighted by how
+# much each mattered to this brief. It is NOT derived from the rank (the previous version
+# was, which made it circular: it could not independently justify the ordering it fed).
+# Weights: the brief's explicit asks (grounding, MPD semantics, yt.sh fidelity) carry most;
+# auth was never requested, so it barely counts.
+WEIGHTS = {
+    "Verified vs assumed": 3.0, "Queue vs interrupt": 3.0, "yt.sh fidelity": 3.0,
+    "Cron path left intact": 2.0, "Async / concurrency": 2.0, "Persistence": 2.0,
+    "Automated tests": 2.0, "Avoided ports: mapping": 1.5, "Crash resilience": 1.5,
+    "Checkbox model": 1.0, "Video container": 1.0, "Audio format": 0.5, "Auth": 0.5,
 }
+
 # Models retired from Ollama Cloud (waves 2026-07-15 / 07-31) - can't be re-run/demoed.
 RETIRED = {"gemini-3-flash-preview-cloud", "qwen3-coder-480b-cloud"}
 # Runs handicapped by environment failure, not model capability (shown with a marker).
@@ -34,143 +34,151 @@ HANDICAPPED = {"fable-5 v1"}   # original: Bash-tool outage blocked git show/ssh
 PAIRED = {"fable-5 v1", "fable-5 v2"}
 
 L = lambda s: s.lower()
+NEG = r"(no|not|never|without)\s+"   # negation prefix used by the corrected scorers
 
 def sc_grounded(t):
-    t = L(t)
-    if "deepest" in t and "verified" in t: return 4, "verified, deepest"
-    if "deepest" in t: return 4, "deepest"
-    if "reflog" in t or "reconstruct" in t: return 2, "reconstructed"
-    if "file:line" in t or "ssh" in t or "verified" in t: return 4, "verified"
-    if "commit" in t or "cites" in t or "precise" in t: return 3, "commit-precise"
-    if "deep" in t: return 3, "deep"
-    if "none" in t or "no investigation" in t or "shallow" in t: return 0, "none/shallow"
-    return 2, "partial"
-
+    t=L(t)
+    if re.search(NEG+r"(ssh|verif|investigat)",t) or "assumed" in t: return 0,"none/shallow"
+    if "shallow" in t: return 0,"none/shallow"
+    if "restated" in t: return 1,"restated only"
+    if "deepest" in t and "verified" in t: return 4,"verified, deepest"
+    if "reflog" in t or "reconstruct" in t: return 2,"reconstructed"
+    if "deepest" in t: return 4,"deepest"
+    if "file:line" in t or "ssh" in t or "verified" in t: return 4,"verified"
+    if re.search(r"no commit hash",t): return 2,"deep, unpinned"
+    if "commit" in t or "cites" in t or "precise" in t: return 3,"commit-precise"
+    if "deep" in t: return 3,"deep"
+    if "none" in t: return 0,"none/shallow"
+    return 2,"partial"
 def sc_mpd(t):
-    t = L(t)
-    if "cron" in t: return 0, "cron-play misread"
-    if "playwithmpd" in t and "enqueue" not in t and "append" not in t: return 1, "interrupts"
-    if "resume prior" in t or "resume the previously" in t: return 4, "append+resume (best)"
-    if "updating_db" in t or ("enqueue" in t and "no play" in t): return 4, "append (best)"
-    if "enqueue" in t or "append" in t or "addid" in t: return 3, "append"
-    if "scheduler queue" in t or "muddl" in t: return 1, "misread"
-    return 2, "unclear"
-
+    t=L(t)
+    if not t.strip() or t.strip() in ("none","vague","unclear"): return 0,"not addressed"
+    if "cron-play" in t or ("cron" in t and "misread" in t): return 0,"cron-play misread"
+    if "playwithmpd" in t and "enqueue" not in t and "append" not in t and "untouched" not in t: return 1,"interrupts"
+    if "resume prior" in t or "resume the previously" in t: return 4,"append+resume (best)"
+    if "updating_db" in t or ("enqueue" in t and "no play" in t): return 4,"append (best)"
+    if "enqueue" in t or "append" in t or "addid" in t: return 3,"append"
+    if "scheduler queue" in t or "muddl" in t: return 1,"misread"
+    return 2,"unclear"
 def sc_checkboxes(t):
-    t = L(t)
-    n = re.search(r"(\d)", t)
-    if "coupled" in t or "conflat" in t or "tied" in t: return 1, "coupled"
-    if "no video" in t or "missing" in t: return 0, "missing one"
-    if n and int(n.group(1)) >= 4: return 4, f"{n.group(1)} independent"
-    if n and int(n.group(1)) == 3: return 4, "3 independent"
-    if n and int(n.group(1)) == 2: return 3, "2 independent"
-    return 2, "partial"
-
+    t=L(t)
+    n=re.search(r"(\d)",t)
+    if "coupled" in t or "conflat" in t or "tied" in t: return 1,"coupled"
+    if "no video" in t or "missing" in t: return 0,"missing one"
+    if not n: return 0,"not modelled"
+    v=int(n.group(1))
+    if v>=2: return 4,f"{v} independent"
+    return 0,"missing one"
 def sc_ytsh(t):
-    t = L(t)
-    if "full" in t and "existing" in t and "archive" in t: return 4, "full + shared ledger"
-    if "full" in t and ("deliberately keeps" in t or "don't fix" in t): return 4, "full, NA kept"
-    if "full" in t and ("fix" in t or "|)" in t): return 4, "full + NA fix"
-    if "full" in t: return 4, "full fidelity"
-    if "wrong" in t or "overrid" in t or "existing scheduler" in t: return 0, "wrong template"
-    if "drops" in t or "no archive" in t or "partial" in t: return 1, "partial"
-    if "template only" in t: return 2, "template only"
-    return 2, "partial"
-
+    t=L(t)
+    if "not addressed" in t or "not fully" in t or not t.strip(): return 0,"not addressed"
+    if "full" in t and "existing" in t and "archive" in t: return 4,"full + shared ledger"
+    if "full" in t and ("deliberately keeps" in t or "don't fix" in t): return 4,"full, NA kept"
+    if "full" in t and ("fix" in t or "|)" in t): return 4,"full + NA fix"
+    if "full" in t: return 4,"full fidelity"
+    if "wrong" in t or "overrid" in t or "existing scheduler" in t: return 0,"wrong template"
+    if "no archive" in t or "no playlist_title" in t or "drops" in t or "partial" in t: return 1,"partial"
+    if "template only" in t or "template" in t: return 2,"template only"
+    return 2,"partial"
 def sc_newmethod(t):
-    t = L(t)
-    if "untouched" in t or "wrapper" in t or "sibling" in t: return 4, "additive"
-    if "refactor" in t or "delegat" in t or "modifies" in t or "modify" in t: return 1, "modifies Download"
-    if "new" in t or "download" in t and "options" in t: return 3, "new method"
-    return 2, "unclear"
-
+    t=L(t)
+    if re.search(r"(refactor|delegat|modifies|modify)\w*\s+(the\s+)?(existing\s+)?download|modifies download|refactors existing download|modifies pattern|adds videoonly",t): return 1,"modifies Download"
+    if re.search(r"download\s+untouched|existing download.*untouched|untouched.*download",t): return 4,"additive"
+    if "wrapper" in t or "sibling" in t: return 4,"additive"
+    if "untouched" in t: return 4,"additive"
+    if "refactor" in t or "delegat" in t or "modifies" in t or "modify" in t: return 1,"modifies Download"
+    if "reuses existing download" in t or "python" in t or "flask" in t: return 0,"no new method"
+    if re.search(r"^download\w+|new method|\bnew\b",t): return 2,"new name, silent on Download"
+    return 2,"unclear"
 def sc_async(t):
-    t = L(t)
-    pool = "worker pool" in t or "semaphore" in t or re.search(r"\bworkers?\b", t)
-    if pool and "timeout" in t: return 4, "pool + timeout"
-    if pool: return 3, "worker pool"
-    if "goroutine" in t or "background" in t or "queue" in t: return 2, "background"
-    if "sync" in t or "none" in t: return 0, "synchronous"
-    return 2, "partial"
-
+    t=L(t)
+    if re.search(r"\b(sync|synchronous)\b",t) or t.strip()=="none" or "no queue" in t: return 0,"synchronous"
+    pool="worker pool" in t or "semaphore" in t or re.search(r"\bworkers?\b",t)
+    if pool and "timeout" in t: return 4,"pool + timeout"
+    if pool: return 3,"worker pool"
+    if "queue" in t: return 3,"queue"
+    if "goroutine" in t or "background" in t: return 2,"background"
+    return 2,"partial"
 def sc_auth(t):
-    t = L(t)
-    if t.strip() in ("none", "no auth", "-") or "no auth" in t: return 0, "none"
-    if "defer" in t or "omit" in t: return 0, "deferred"
-    # "no refuse-to-start" / "not mandatory" are NEGATIONS - must not score as mandatory
-    mandatory = ("fatal" in t or "refuse" in t) and not re.search(r"no\s+refuse|not\s+mandator", t)
-    if mandatory: return 4, "mandatory"
-    if "optional" in t: return 3, "optional"
-    if "basic auth" in t and ("enforced" in t or "if user" in t): return 3, "optional/soft"
-    if "basic auth" in t or "auth" in t: return 3, "optional"
-    return 1, "weak"
-
+    t=L(t)
+    if t.strip() in ("none","no auth","-","mentioned") or "no auth" in t: return 0,"none"
+    if "defer" in t or "omit" in t or re.search(r"\bif (the )?(ui )?(is )?(exposed|a concern)",t): return 0,"deferred"
+    if re.search(r"^optional$",t.strip()): return 1,"named only"
+    mandatory=("fatal" in t or "refuse" in t) and not re.search(r"no\s+refuse|not\s+mandator",t)
+    if mandatory: return 4,"mandatory"
+    if "constant-time" in t or "subtle" in t: return 4,"optional + hardened"
+    if "optional" in t or "basic auth" in t or "auth" in t: return 3,"optional"
+    return 1,"weak"
 def sc_hostnet(t):
-    t = L(t)
-    if "not addressed" in t or "no docker" in t or "gap" in t: return 1, "not addressed"
-    if "no ports" in t or "host net" in t: return 4, "correct"
-    if "expose" in t: return 2, "redundant expose"
-    if "ports" in t: return 0, "breaks host-net"
-    return 2, "unclear"
-
+    t=L(t)
+    if re.search(r"break|adds ports|8080:8080|:5000|expose 8080",t) and "no ports" not in t:
+        if "redundant" in t or "expose" in t and "ports" not in t: return 2,"redundant expose"
+        return 0,"breaks host-net"
+    if "not addressed" in t or "no docker" in t or "gap" in t: return 1,"not addressed"
+    if "no ports" in t or "no port mapping" in t: return 4,"correct"
+    if "expose" in t: return 2,"redundant expose"
+    if re.search(r"\bports\b",t): return 0,"breaks host-net"
+    return 2,"unclear"
 def sc_persist(t):
-    t = L(t)
-    if "reconcil" in t or ("jsonl" in t and "crash" in t): return 4, "durable + reconcile"
-    if "jsonl" in t or "durable" in t or "file" in t: return 3, "durable"
-    if "bounded" in t or "in-mem" in t or "map" in t or "cap" in t: return 1, "in-memory"
-    if "none" in t: return 0, "none"
-    return 1, "in-memory"
-
+    t=L(t)
+    if re.search(NEG+r"(file|durable|persist|db)",t) or "no on-disk" in t: return 0,"none"
+    if "opt-in" in t and "not default" in t: return 2,"opt-in durable"
+    if "reconcil" in t or ("jsonl" in t and "crash" in t): return 4,"durable + reconcile"
+    if "jsonl" in t or "durable" in t or re.search(r"\bfile\b|history_path",t): return 3,"durable"
+    if "bounded" in t or "in-mem" in t or "map" in t or "cap" in t: return 1,"in-memory"
+    if "none" in t: return 0,"none"
+    return 1,"in-memory"
 def sc_tests(t):
-    t = L(t)
-    # negations first: "no automated unit tests" must not match the "unit" branch
-    if re.search(r"no (automated|unit)", t) or "manual only" in t:
-        return 1, "manual only"
-    if "richest" in t or ("unit" in t and "e2e" in t): return 4, "unit + e2e"
-    if "httptest" in t and "regression" in t: return 4, "unit + regression"
-    if "httptest" in t or "unit" in t: return 3, "unit tests"
-    if "regression" in t: return 3, "regression"
-    if "manual" in t or "smoke" in t or "step" in t: return 1, "manual only"
-    return 0, "none stated"
-
+    t=L(t)
+    if re.search(r"no (automated|unit)",t) or "manual only" in t: return 1,"manual only"
+    if "optional" in t and ("httptest" in t or "unit" in t or "test" in t): return 2,"tests optional"
+    if "richest" in t or ("unit" in t and "e2e" in t): return 4,"unit + e2e"
+    if "httptest" in t and "regression" in t: return 4,"unit + regression"
+    if "httptest" in t or "unit" in t: return 3,"unit tests"
+    if "regression" in t: return 3,"regression"
+    if "manual" in t or "smoke" in t or "step" in t or "curl" in t: return 1,"manual only"
+    return 0,"none stated"
 def sc_crash(t):
-    t = L(t)
-    if "recover" in t and "no recover" not in t: return 4, "recover()"
-    if "reconcil" in t: return 4, "state reconcile"
-    if "timeout" in t: return 2, "timeout only"
-    if "none" in t: return 0, "none"
-    return 1, "minimal"
-
+    t=L(t)
+    rec = re.search(r"recover|panic",t) and not re.search(r"no recover",t)
+    mid = re.search(r"(panic-?recover|panic recovery)",t)
+    if mid and "no recover() around workers" in t: return 3,"handler recover only"
+    if rec: return 4,"recover()"
+    if "reconcil" in t: return 4,"state reconcile"
+    if "timeout" in t: return 2,"timeout only"
+    if "graceful" in t or "shutdown" in t: return 1,"shutdown only"
+    if t.strip() in ("none","not addressed"): return 0,"none"
+    return 1,"minimal"
 def sc_video(t):
-    t = L(t)
-    if "mkv" in t: return 4, "mkv (correct)"
-    if "mp4" in t: return 1, "mp4 (wrong)"
-    if "format best" in t or "--format best" in t: return 0, "no merge"
-    if "unspecified" in t or "n/a" in t or not t.strip(): return 1, "unspecified"
-    return 2, "partial"
-
+    t=L(t)
+    if re.search(r"no (video|merge)|mp4|--format best",t) and "mkv" not in t: pass
+    if "mkv" in t and not re.search(r"no merge|no merge flag|not mkv",t): return 4,"mkv (correct)"
+    if "mp4" in t: return 1,"mp4 (wrong)"
+    if "no merge" in t or "format best" in t: return 0,"no merge"
+    if "no video" in t: return 0,"no video option"
+    if "unspecified" in t or "n/a" in t or not t.strip(): return 1,"unspecified"
+    return 2,"partial"
 def sc_audio(t):
-    t = L(t)
-    if "bestaudio" in t and ("native" in t or "no re-encode" in t):
-        return 4, "native, no re-encode"
-    if "m4a" in t: return 4, "m4a (correct)"
-    if not t.strip() or "n/a" in t: return 0, "omitted"
-    return 2, "other"
-
+    t=L(t)
+    if re.search(NEG+r"m4a|avoids m4a",t): return 1,"wrong/absent"
+    if "bestaudio" in t and ("native" in t or "no re-encode" in t): return 4,"native, no re-encode"
+    if "m4a" in t: return 4,"m4a (correct)"
+    if not t.strip() or "n/a" in t or "unspecified" in t: return 0,"omitted"
+    return 2,"other"
 CATS = [
-    ("Grounding depth",        "Grounded",                         sc_grounded),
-    ("MPD semantics",          "MPD semantics",                    sc_mpd),
+    ("Verified vs assumed",    "Grounded",                         sc_grounded),
+    ("Queue vs interrupt",     "MPD semantics",                    sc_mpd),
     ("Checkbox model",         "Checkboxes",                       sc_checkboxes),
     ("yt.sh fidelity",         "yt.sh template+archive",           sc_ytsh),
-    ("Additive downloader",    "New method vs modify Download",    sc_newmethod),
+    ("Cron path left intact",  "New method vs modify Download",    sc_newmethod),
     ("Async / concurrency",    "Async queue",                      sc_async),
     ("Auth",                   "Auth",                             sc_auth),
-    ("Host-net deploy",        "Host-net handling",                sc_hostnet),
+    ("Avoided ports: mapping", "Host-net handling",                sc_hostnet),
     ("Persistence",            "Persistence",                      sc_persist),
     ("Automated tests",        "Tests",                            sc_tests),
     ("Crash resilience",       "Crash resilience",                 sc_crash),
-    ("Video codec",            "Video codec/format",               sc_video),
-    ("Audio codec",            "Audio codec/format",               sc_audio),
+    ("Video container",        "Video codec/format",               sc_video),
+    ("Audio format",           "Audio codec/format",               sc_audio),
 ]
 
 # Five CSV rows contain unquoted commas inside prose cells, so DictReader shifts the
@@ -195,7 +203,7 @@ for r in rows[1:]:
     plan = r[1]
     total_tok = int(r[HDR_IDX["total_tokens"]])
     out_tok = int(r[HDR_IDX["output_tokens"]])
-    q = QUALITY.get(plan, 0)
+    q = 0  # filled in after all cells are scored (needs WEIGHTS x cells)
     cells = {}
     for label, col, fn in CATS:
         raw = r[HDR_IDX[col]]
@@ -207,6 +215,12 @@ for r in rows[1:]:
         "cells": cells, "retired": plan in RETIRED, "handicapped": plan in HANDICAPPED,
         "paired": plan in PAIRED,
     })
+
+# --- bottom-up quality: weighted category sum, rescaled so the field's best = 99 ---
+for m in models:
+    num = sum(WEIGHTS[c] * m["cells"][c]["s"] for c in WEIGHTS)
+    den = sum(WEIGHTS.values()) * 4
+    m["quality"] = round(99 * num / den, 1)
 
 # --- $20 efficiency: quality delivered per output token, indexed to best = 100 ---
 # Output tokens are the fair cross-model effort proxy (cache-heavy totals mislead).

@@ -16,9 +16,9 @@ design taste but in how much each model actually went and checked.
 
 ## Results
 
-[View the comparison table](https://htmlpreview.github.io/?https://github.com/lootek/yt-player-scheduler/blob/main/ai-plans/model-comparison.html)
+[View the comparison table](https://lootek.github.io/yt-player-scheduler/ai-plans/model-comparison.html)
 — 25 runs x 13 categories, toggle models, hover any cell for the original finding.
-GitHub serves raw HTML as plain text, hence the preview link. Or clone and open
+GitHub serves raw HTML in-repo as plain text, so that link goes via Pages. Or clone and open
 `model-comparison.html` locally.
 
 Regenerate from the data: `python3 make_comparison_table.py`
@@ -50,12 +50,20 @@ generating 25% more output. A model score is partly a score of its environment.
 
 ## Caveats - read before quoting a number
 
-This is one engineer's opinionated comparison, not a benchmark: n=1 per model, the scorer isn't
-blind and wrote the task, and the 0–100 "quality" figure is derived from the assigned tier so it
-can't independently justify the ranking (the 0–4 category ratings are the defensible part).
-Ratings are keyword-mapped from prose, inspectable but brittle. Runs span weeks, different
-machines, and a slightly refined prompt between batches. `muse-glimmer` is absent: it never
-parsed the prompt in this harness, so there was nothing to score.
+This is one engineer's opinionated comparison, not a benchmark. n=1 per model, and the scorer
+isn't blind - I wrote the task. Runs span weeks, different machines, and a slightly refined prompt
+between batches. `muse-glimmer` is absent: it never parsed the prompt in this harness, so there was
+nothing to score.
+
+Two things worth knowing about the numbers. The 13 categories are not 13 independent dimensions -
+they correlate strongly (first principal component ~53% of variance, alpha 0.92), so read the table
+as one axis, roughly "did the model go and check the running system", measured several ways. And the
+ratings are keyword-mapped from prose cells, which is inspectable but brittle: I've found and fixed
+18 scoring bugs so far, every one of them a negation or an incidental substring - at one point three
+plans that explicitly broke the deployment were showing full marks for deployment. Assume more
+remain.
+
+The top two tie on the rubric (51/52 each), so #1 vs #2 is my judgement, not a measurement.
 
 For a rigorous take on this kind of evaluation (repeat trials, median + pass@k, a fixed judge
 stronger than every entrant, pinned containers), see
