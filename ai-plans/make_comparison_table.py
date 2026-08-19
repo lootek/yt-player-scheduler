@@ -413,8 +413,9 @@ TPL = """<!DOCTYPE html>
     score. <b>Input/command safety is the most independent axis in the table</b> (mean |r| = 0.34
     against the other 13): <code>glm-5.3</code> scores 4 on it, both Opus plans score 0.
     <br><b>Noticed prior art</b> is the headline finding, previously buried in prose: <code>master</code>
-    already ships this exact feature, live on the Pi. <b>21 of 25 runs never noticed.</b> Two named it and
-    moved on, <code>qwen3.5-397b</code> read its source and asked extend-or-rebuild, and only
+    already ships this exact feature, live on the Pi. <b>19 of 25 runs never noticed.</b> Three named it and
+    moved on, <code>qwen3.5-397b</code> read its source and asked extend-or-rebuild, <code>fable-5 v2</code>
+    worked out the history divergence and ported a commit out of it, and only
     <code>opus-5</code> probed the running service — finding its job history write-only (117 events on
     disk, <code>/api/jobs</code> returning <code>[]</code>) plus three unrelated pre-existing bugs.
     <br><b>⛒ / ⇄ fable-5 v1 and v2 are the same model on the same prompt, kept deliberately.</b>
@@ -532,15 +533,6 @@ document.getElementById('chips').addEventListener('click', e=>{
     const p = b.dataset.p;
     on.has(p) ? on.delete(p) : on.add(p);
   }
-  document.getElementById('body').addEventListener('click', e=>{
-  const th = e.target.closest('th.sortable'); if(!th) return;
-  const k = th.dataset.sort;
-  // same row -> flip direction; new row -> ascending, except the "bigger is better"
-  // rows where descending is the useful default
-  if (sort.key===k) sort.dir = -sort.dir;
-  else sort = {key:k, dir: (k==='rank'||k==='out') ? 1 : -1};
-  render();
-});
 
 chips(); render();
 });
