@@ -16,10 +16,11 @@ design taste but in how much each model actually went and checked.
 
 ## Results
 
-[View the comparison table](https://lootek.github.io/yt-player-scheduler/ai-plans/model-comparison.html)
+**[View the comparison table](https://lootek.github.io/yt-player-scheduler/ai-plans/model-comparison.html)**
 — 25 runs x 13 categories, toggle models, hover any cell for the original finding.
-GitHub serves raw HTML in-repo as plain text, so that link goes via Pages. Or clone and open
-`model-comparison.html` locally.
+
+Served via Pages because GitHub renders raw HTML in-repo as plain text. Works offline too: clone
+and open `model-comparison.html`, it has no dependencies.
 
 Regenerate from the data: `python3 make_comparison_table.py`
 

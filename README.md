@@ -9,6 +9,20 @@ A small Go scheduler that searches YouTube daily feeds by keyword + date and pla
 - **MPD support**: can add streams directly to a local Music Player Daemon playlist
 - Optional `-run-now` flag to run all jobs once on startup
 
+## AI planning bake-off
+
+This repo doubles as the subject of a side experiment: I gave the same brownfield feature request
+(the download web UI, pinned at an older commit) to 23 LLMs in plan mode and compared the
+implementation plans they produced.
+
+**[Comparison table](https://lootek.github.io/yt-player-scheduler/ai-plans/model-comparison.html)**
+— 25 runs, 13 categories, toggle models, hover for detail.
+Plans, prompts and methodology in [`ai-plans/`](ai-plans/).
+
+The clearest divider wasn't model size: it was whether a model went and checked. `master` already
+had a different implementation of this feature running on the Pi, and one plan curl'd it and found
+a real bug in it.
+
 ## What is yt-dlp?
 [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) is a maintained fork of `youtube-dl` used to search YouTube (`ytsearch`), resolve media URLs, and stream audio without a browser.
 
