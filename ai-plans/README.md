@@ -17,7 +17,7 @@ design taste but in how much each model actually went and checked.
 ## Results
 
 **[View the comparison table](https://lootek.github.io/yt-player-scheduler/ai-plans/model-comparison.html)**
-— 25 runs x 17 categories, toggle models, hover any cell for the original finding.
+— 25 runs x 18 categories, toggle models, hover any cell for the original finding.
 
 Served via Pages because GitHub renders raw HTML in-repo as plain text. Works offline too: clone
 and open `model-comparison.html`, it has no dependencies.

@@ -27,6 +27,7 @@ WEIGHTS = {
     # safety is the most independent axis in the matrix
     "Discovery facts stated": 2.0, "Execution plan": 2.0,
     "Boot-guard awareness": 1.5, "Input/command safety": 1.5,
+    "Noticed prior art": 2.0,
 }
 
 # Models retired from Ollama Cloud (waves 2026-07-15 / 07-31) - can't be re-run/demoed.
@@ -45,6 +46,9 @@ NEW_CATS = [
     ("Execution plan",         "execution_plan",  "execution_evidence"),
     ("Boot-guard awareness",   "boot_guard",      "boot_evidence"),
     ("Input/command safety",   "input_safety",    "safety_evidence"),
+    # The headline finding of the whole comparison, previously buried in the Grounded prose:
+    # master already ships this feature, live on the Pi. 21 plans never noticed. One probed it.
+    ("Noticed prior art",      "master_awareness","master_evidence"),
 ]
 NEW_SCORES = {}
 _np = os.path.join(HERE, "new-categories-scores.csv")
@@ -312,6 +316,9 @@ TPL = """<!DOCTYPE html>
   .chip[aria-pressed="true"]{background:var(--r1);border-color:var(--r3);color:#fff}
   .chip .tdot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
   .chip .ret{font-size:10px;color:var(--warning)}
+  .chip .crank{font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums;
+    min-width:12px;text-align:right}
+  .chip[aria-pressed="true"] .crank{color:rgba(255,255,255,.75)}
   .hcap{font-size:11px;color:var(--critical)}
   .pair{font-size:11px;color:var(--r4)}
   .bulk{margin-left:auto;display:flex;gap:6px}
@@ -319,7 +326,7 @@ TPL = """<!DOCTYPE html>
   .scroll{overflow-x:auto;overflow-y:visible;border:1px solid var(--ring);
     border-radius:10px;background:var(--surface-1)}
   table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
-  th,td{padding:3px 10px;text-align:left;border-bottom:1px solid var(--grid);
+  th,td{padding:2px 10px;text-align:left;border-bottom:1px solid var(--grid);
     white-space:nowrap;line-height:1.25}
   thead th{position:sticky;top:0;z-index:3;background:var(--surface-1);
     border-bottom:1px solid var(--axis);vertical-align:bottom;padding-bottom:6px}
@@ -356,11 +363,11 @@ TPL = """<!DOCTYPE html>
   .effbar{height:5px;border-radius:3px;background:var(--axis);width:64px;
     overflow:hidden;flex:0 0 auto}
   .effbar i{display:block;height:100%;border-radius:3px;background:var(--r4)}
-  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:10px;
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;font-size:9.5px;
     color:var(--muted);align-items:center}
   .legend .li{display:flex;align-items:center;gap:6px}
   .legend .seg{width:8px;height:11px}
-  .foot{margin-top:8px;font-size:10px;color:var(--muted);line-height:1.5;max-width:1250px}
+  .foot{margin-top:6px;font-size:9.5px;color:var(--muted);line-height:1.5;max-width:1250px}
   .hidden{display:none}
   [data-tip]{cursor:help}
 </style>
@@ -372,7 +379,7 @@ TPL = """<!DOCTYPE html>
      Each category rated 0–4; hover any cell for the original finding.</p>
 
   <div class="controls">
-    <h2>Models — click to show / hide</h2>
+    <h2>Models — click to show / hide <span style="text-transform:none;letter-spacing:0">(ordered by rank)</span></h2>
     <div class="chips" id="chips"></div>
   </div>
 
@@ -399,12 +406,17 @@ TPL = """<!DOCTYPE html>
     which is what a $20 budget actually buys.
     <br><b>⚠ retired</b> = model has since been retired from Ollama Cloud (waves 2026-07-15 / 07-31):
     its result stands as history but it can't be re-run or demoed live.
-    <br><b>The last four rows are hand-scored</b> from a full read of all 25 plans, not keyword-derived
+    <br><b>The last five rows are hand-scored</b> from a full read of all 25 plans, not keyword-derived
     like the first 13. They were added because the original 13 correlated heavily (one latent
     "did it go and check" factor) and missed real strengths — <code>opus-4-8</code> ranked below
     <code>opus-4-7</code> purely because its verified-facts block and commit/subagent plan had nowhere to
     score. <b>Input/command safety is the most independent axis in the table</b> (mean |r| = 0.34
     against the other 13): <code>glm-5.3</code> scores 4 on it, both Opus plans score 0.
+    <br><b>Noticed prior art</b> is the headline finding, previously buried in prose: <code>master</code>
+    already ships this exact feature, live on the Pi. <b>21 of 25 runs never noticed.</b> Two named it and
+    moved on, <code>qwen3.5-397b</code> read its source and asked extend-or-rebuild, and only
+    <code>opus-5</code> probed the running service — finding its job history write-only (117 events on
+    disk, <code>/api/jobs</code> returning <code>[]</code>) plus three unrelated pre-existing bugs.
     <br><b>⛒ / ⇄ fable-5 v1 and v2 are the same model on the same prompt, kept deliberately.</b>
     v1 (⛒) hit a Bash-tool outage that blocked <code>git show</code> and ssh, so it
     reconstructed the target commit from the reflog and scored 2/4 on grounding. v2 (⇄)
@@ -453,6 +465,7 @@ function chips(){
       const c = 'var('+(TIERC[m.tier]||'--muted')+')';
       return '<button class="chip" role="button" aria-pressed="'+on.has(m.plan)+'" data-p="'+esc(m.plan)+'">'
         + '<span class="tdot" style="background:'+c+'"></span>'
+        + '<span class="crank">'+m.rank+'</span>'
         + esc(m.plan)
         + (m.retired?' <span class="ret">⚠</span>':'')
         + (m.handicapped?' <span class="hcap" title="environment-handicapped: tool outage during the run">⛒</span>':'')
