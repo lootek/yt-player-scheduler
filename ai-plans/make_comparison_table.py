@@ -295,17 +295,17 @@ TPL = """<!DOCTYPE html>
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--page);color:var(--ink);
     font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-  .wrap{padding:20px 24px 40px;max-width:1900px;margin:0 auto}
-  h1{font-size:20px;margin:0 0 4px;font-weight:650;letter-spacing:-.01em}
-  .sub{color:var(--ink-2);font-size:13px;margin:0 0 18px}
+  .wrap{padding:14px 20px 20px;max-width:1900px;margin:0 auto}
+  h1{font-size:17px;margin:0 0 3px;font-weight:650;letter-spacing:-.01em}
+  .sub{color:var(--ink-2);font-size:11.5px;margin:0 0 10px}
   .sub code{color:var(--r4)}
   .controls{background:var(--surface-1);border:1px solid var(--ring);border-radius:10px;
-    padding:12px 14px;margin-bottom:16px}
-  .controls h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;
-    color:var(--muted);margin:0 0 10px;font-weight:600}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    padding:8px 10px;margin-bottom:10px}
+  .controls h2{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--muted);margin:0 0 6px;font-weight:600}
+  .chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
   .chip{background:transparent;color:var(--ink-2);border:1px solid var(--axis);
-    border-radius:999px;padding:5px 11px;font-size:12px;cursor:pointer;
+    border-radius:999px;padding:3px 9px;font-size:11px;cursor:pointer;
     font-family:inherit;transition:.12s;white-space:nowrap;display:inline-flex;
     align-items:center;gap:6px}
   .chip:hover{border-color:var(--r3);color:var(--ink)}
@@ -316,45 +316,51 @@ TPL = """<!DOCTYPE html>
   .pair{font-size:11px;color:var(--r4)}
   .bulk{margin-left:auto;display:flex;gap:6px}
   .bulk .chip{border-style:dashed}
-  .scroll{overflow:auto;border:1px solid var(--ring);border-radius:10px;
-    background:var(--surface-1);max-height:76vh}
+  .scroll{overflow-x:auto;overflow-y:visible;border:1px solid var(--ring);
+    border-radius:10px;background:var(--surface-1)}
   table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
-  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--grid);
-    white-space:nowrap}
+  th,td{padding:3px 10px;text-align:left;border-bottom:1px solid var(--grid);
+    white-space:nowrap;line-height:1.25}
   thead th{position:sticky;top:0;z-index:3;background:var(--surface-1);
-    border-bottom:1px solid var(--axis);vertical-align:bottom;padding-bottom:11px}
+    border-bottom:1px solid var(--axis);vertical-align:bottom;padding-bottom:6px}
   tbody th,thead th:first-child{position:sticky;left:0;z-index:2;
     background:var(--surface-1);border-right:1px solid var(--axis)}
   thead th:first-child{z-index:4}
-  tbody th{font-weight:500;color:var(--ink-2);font-size:12px}
+  tbody th{font-weight:500;color:var(--ink-2);font-size:11px}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--ink)}
+  .sarrow{margin-left:5px;font-size:9px}
+  .sarrow.idle{color:var(--axis)}
+  .sarrow.on{color:var(--r4)}
+  .rankval{color:var(--muted)}
   .mname{font-weight:650;font-size:13px;color:var(--ink);display:block}
-  .mmeta{font-size:11px;color:var(--muted);font-weight:400;display:block;margin-top:3px;
+  .mmeta{font-size:10px;color:var(--muted);font-weight:400;display:block;margin-top:2px;
     font-variant-numeric:tabular-nums}
   .tier{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;
     border-radius:4px;color:#0d0d0d;margin-right:5px}
-  .cell{display:flex;align-items:center;gap:9px}
+  .cell{display:flex;align-items:center;gap:7px}
   .meter{display:flex;gap:2px;flex:0 0 auto}
-  .seg{width:9px;height:14px;border-radius:2px;background:var(--axis)}
+  .seg{width:8px;height:11px;border-radius:2px;background:var(--axis)}
   .seg.on{background:var(--r3)}
   .s0 .seg.on{background:var(--critical)} .s1 .seg.on{background:var(--serious)}
   .s2 .seg.on{background:var(--warning)}  .s3 .seg.on{background:var(--r3)}
   .s4 .seg.on{background:var(--good)}
-  .ctext{font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis}
+  .ctext{font-size:11px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis}
   tbody tr:hover td,tbody tr:hover th{background:#232322}
   tr.spacer td{height:6px;padding:0;border:none;background:transparent}
-  tr.section th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+  tr.section th{font-size:9px;text-transform:uppercase;letter-spacing:.08em;
     color:var(--muted);font-weight:700;border-bottom:1px solid var(--axis);
-    padding-top:14px}
+    padding-top:7px}
   tr.section td{border-bottom:1px solid var(--axis)}
   .num{font-variant-numeric:tabular-nums;font-size:13px;color:var(--ink)}
-  .effbar{height:6px;border-radius:3px;background:var(--axis);width:70px;
+  .effbar{height:5px;border-radius:3px;background:var(--axis);width:64px;
     overflow:hidden;flex:0 0 auto}
   .effbar i{display:block;height:100%;border-radius:3px;background:var(--r4)}
-  .legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;font-size:11px;
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:10px;
     color:var(--muted);align-items:center}
   .legend .li{display:flex;align-items:center;gap:6px}
   .legend .seg{width:8px;height:11px}
-  .foot{margin-top:14px;font-size:11px;color:var(--muted);line-height:1.6;max-width:1100px}
+  .foot{margin-top:8px;font-size:10px;color:var(--muted);line-height:1.5;max-width:1250px}
   .hidden{display:none}
   [data-tip]{cursor:help}
 </style>
@@ -412,6 +418,12 @@ TPL = """<!DOCTYPE html>
 const DATA = __PAYLOAD__;
 const TIERC = {S:'--tierS',A:'--tierA',B:'--tierB',C:'--tierC',F:'--tierF'};
 const on = new Set(DATA.defaultOn);
+// Columns are models, so "sorting a row" reorders the COLUMNS by that row's values.
+// key: 'rank' | 'quality' | 'eff' | 'out' | a category name.  dir: 1 asc, -1 desc.
+let sort = {key:'rank', dir:1};
+const valOf = (m,k) =>
+  k==='rank' ? m.rank : k==='quality' ? m.quality : k==='eff' ? m.eff :
+  k==='out'  ? m.out  : (m.cells[k] ? m.cells[k].s : 0);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 function meter(score){
@@ -419,7 +431,21 @@ function meter(score){
   for(let i=0;i<5;i++) h += '<span class="seg'+(i<=score?' on':'')+'"></span>';
   return h+'</span>';
 }
-function shown(){ return DATA.models.filter(m=>on.has(m.plan)); }
+function shown(){
+  const ms = DATA.models.filter(m=>on.has(m.plan));
+  ms.sort((a,b)=>{
+    const d = (valOf(a,sort.key)-valOf(b,sort.key)) * sort.dir;
+    return d !== 0 ? d : a.rank-b.rank;      // stable tiebreak on rank
+  });
+  return ms;
+}
+function arrow(k){
+  if (sort.key!==k) return '<span class="sarrow idle">\u21c5</span>';
+  return '<span class="sarrow on">'+(sort.dir===1?'\u2191':'\u2193')+'</span>';
+}
+function rowHead(label,key){
+  return '<th class="sortable" data-sort="'+key+'">'+esc(label)+arrow(key)+'</th>';
+}
 
 function chips(){
   document.getElementById('chips').innerHTML =
@@ -455,21 +481,24 @@ function render(){
 
   let rows = '<tr class="section"><th>Headline</th>'+ms.map(()=>'<td></td>').join('')+'</tr>';
 
-  rows += '<tr><th>Plan quality (0–100)</th>' + ms.map(m=>
+  rows += '<tr>' + rowHead('Rank','rank') + ms.map(m=>
+    '<td><span class="num rankval">#'+m.rank+'</span></td>').join('') + '</tr>';
+
+  rows += '<tr>' + rowHead('Plan quality (0–100)','quality') + ms.map(m=>
     '<td><div class="cell"><span class="effbar"><i style="width:'+m.quality+'%"></i></span>'
     +'<span class="num">'+m.quality+'</span></div></td>').join('') + '</tr>';
 
-  rows += '<tr><th>$20 efficiency (index)</th>' + ms.map(m=>
+  rows += '<tr>' + rowHead('$20 efficiency (index)','eff') + ms.map(m=>
     '<td><div class="cell"><span class="effbar"><i style="width:'+Math.max(2,m.eff)+'%"></i></span>'
     +'<span class="num">'+m.eff+'</span></div></td>').join('') + '</tr>';
 
-  rows += '<tr><th>Output tokens</th>' + ms.map(m=>
+  rows += '<tr>' + rowHead('Output tokens','out') + ms.map(m=>
     '<td><span class="num">'+m.out.toLocaleString()+'</span></td>').join('') + '</tr>';
 
   rows += '<tr class="section"><th>Scored categories</th>'+ms.map(()=>'<td></td>').join('')+'</tr>';
 
   DATA.cats.forEach(cat=>{
-    rows += '<tr><th>'+esc(cat)+'</th>' + ms.map(m=>{
+    rows += '<tr>' + rowHead(cat,cat) + ms.map(m=>{
       const c = m.cells[cat];
       return '<td><div class="cell s'+c.s+'" data-tip="'+esc(c.raw)+'" title="'+esc(c.raw)+'">'
         + meter(c.s) + '<span class="ctext">'+esc(c.t)+'</span></div></td>';
@@ -490,7 +519,27 @@ document.getElementById('chips').addEventListener('click', e=>{
     const p = b.dataset.p;
     on.has(p) ? on.delete(p) : on.add(p);
   }
-  chips(); render();
+  document.getElementById('body').addEventListener('click', e=>{
+  const th = e.target.closest('th.sortable'); if(!th) return;
+  const k = th.dataset.sort;
+  // same row -> flip direction; new row -> ascending, except the "bigger is better"
+  // rows where descending is the useful default
+  if (sort.key===k) sort.dir = -sort.dir;
+  else sort = {key:k, dir: (k==='rank'||k==='out') ? 1 : -1};
+  render();
+});
+
+chips(); render();
+});
+
+document.getElementById('body').addEventListener('click', e=>{
+  const th = e.target.closest('th.sortable'); if(!th) return;
+  const k = th.dataset.sort;
+  // same row -> flip direction; new row -> ascending, except the "bigger is better"
+  // rows where descending is the useful default
+  if (sort.key===k) sort.dir = -sort.dir;
+  else sort = {key:k, dir: (k==='rank'||k==='out') ? 1 : -1};
+  render();
 });
 
 chips(); render();
